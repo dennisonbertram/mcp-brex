@@ -23,14 +23,14 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
-  ListResourcesRequestSchema,
   ListToolsRequestSchema,
-  ReadResourceRequestSchema,
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
+  ListResourcesRequestSchema,
+  ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { BrexClient } from "./services/brex/client.js";
-import { logError, logInfo } from "./utils/logger.js";
+import { logError, logInfo, logDebug } from "./utils/logger.js";
 import { isBrexAccount, isBrexTransaction } from "./services/brex/types.js";
 
 // Initialize Brex client
@@ -43,55 +43,85 @@ const server = new Server(
   },
   {
     capabilities: {
-      resources: {},
+      resources: {
+        "brex://accounts": {
+          description: "Brex accounts",
+          mimeTypes: ["application/json"],
+        }
+      },
       tools: {},
       prompts: {},
     },
   }
 );
 
-// List Brex accounts as resources
+// List available resources without making API calls
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
-  try {
-    const accounts = await brexClient.getAccounts();
-    return {
-      resources: accounts.items.map(account => ({
-        uri: `brex://accounts/${account.id}`,
-        mimeType: "application/json",
-        name: account.name,
-        description: `Brex ${account.type} Account: ${account.name} (${account.currency})`
-      }))
-    };
-  } catch (error) {
-    logError(error as Error);
-    throw error;
-  }
+  logDebug("Listing available Brex resources");
+  return {
+    resources: [{
+      uri: "brex://accounts",
+      mimeType: "application/json",
+      name: "Brex Accounts",
+      description: "List of all Brex accounts"
+    }]
+  };
 });
 
-// Read account details or transactions
+// Read resource contents with API calls
 server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   try {
-    const url = new URL(request.params.uri);
-    const [resourceType, id] = url.pathname.replace(/^\//, '').split('/');
-
-    if (resourceType === 'accounts') {
+    const uri = request.params.uri;
+    logDebug(`Reading resource: ${uri}`);
+    
+    if (uri === "brex://accounts") {
+      try {
+        logDebug("Fetching all accounts from Brex API");
+        const accounts = await brexClient.getAccounts();
+        logDebug(`Successfully fetched ${accounts.items.length} accounts`);
+        return {
+          contents: [{
+            uri: uri,
+            mimeType: "application/json",
+            text: JSON.stringify(accounts.items, null, 2)
+          }]
+        };
+      } catch (error) {
+        logError(`Failed to fetch accounts: ${error instanceof Error ? error.message : String(error)}`);
+        throw error;
+      }
+    }
+    
+    const match = uri.match(/^brex:\/\/accounts\/(.+)$/);
+    if (!match) {
+      logError(`Invalid URI format: ${uri}`);
+      throw new Error(`Invalid URI format: ${uri}`);
+    }
+    
+    const id = match[1];
+    try {
+      logDebug(`Fetching account ${id} from Brex API`);
       const account = await brexClient.getAccount(id);
+      
       if (!isBrexAccount(account)) {
+        logError(`Invalid account data received for account ID: ${id}`);
         throw new Error('Invalid account data received');
       }
-
+      
+      logDebug(`Successfully fetched account ${id}`);
       return {
         contents: [{
-          uri: request.params.uri,
+          uri: uri,
           mimeType: "application/json",
           text: JSON.stringify(account, null, 2)
         }]
       };
+    } catch (error) {
+      logError(`Failed to fetch account ${id}: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
     }
-
-    throw new Error(`Unknown resource type: ${resourceType}`);
   } catch (error) {
-    logError(error as Error);
+    logError(`Error processing resource request: ${error instanceof Error ? error.message : String(error)}`);
     throw error;
   }
 });

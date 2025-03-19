@@ -1,8 +1,8 @@
-import { config } from 'dotenv';
+import { config as dotenvConfig } from 'dotenv';
 import { logError } from '../utils/logger.js';
 
 // Load environment variables
-config();
+dotenvConfig();
 
 interface Config {
   brex: {
@@ -52,4 +52,4 @@ function validateEnv(): Config {
   };
 }
 
-export const config = validateEnv(); 
+export const appConfig = validateEnv(); 

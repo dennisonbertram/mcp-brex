@@ -2,18 +2,18 @@
   "name": "brex-mcp-server",
   "version": "0.1.0",
   "description": "MCP Server for Brex API Integration",
-  "main": "dist/index.js",
+  "main": "build/index.js",
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/index.js",
+    "start": "node build/index.js",
     "dev": "ts-node-esm src/index.ts",
     "lint": "eslint . --ext .ts",
     "test": "jest",
-    "clean": "rimraf dist"
+    "clean": "rimraf build"
   },
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^0.1.0",
+    "@modelcontextprotocol/sdk": "1.7.0",
     "axios": "^1.6.7",
     "dotenv": "^16.4.1"
   },
