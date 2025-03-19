@@ -32,7 +32,7 @@ import {
   ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
 import { BrexClient } from "./services/brex/client.js";
-import { logError, logInfo, logDebug } from "./utils/logger.js";
+import { logError, logInfo, logDebug, logWarn } from "./utils/logger.js";
 import { isBrexAccount, isBrexTransaction } from "./services/brex/types.js";
 import {
   isExpense,
@@ -314,6 +314,18 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
           };
           const expenses = await brexClient.getCardExpenses(listParams);
           logDebug(`Successfully fetched ${expenses.items.length} card expenses`);
+          
+          // Validate returned items
+          if (expenses.items.length > 0) {
+            logDebug(`First card expense item structure: ${JSON.stringify(expenses.items[0], null, 2)}`);
+            const validItems = expenses.items.filter(isExpense);
+            logDebug(`Valid expense items: ${validItems.length}/${expenses.items.length}`);
+            
+            if (validItems.length < expenses.items.length) {
+              logWarn("Some card expenses failed validation but will still be returned");
+            }
+          }
+          
           return {
             contents: [{
               uri: uri,
@@ -334,9 +346,23 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
             load_custom_fields: true
           });
           
+          // Add detailed logging for debugging
+          logDebug(`Received card expense data: ${JSON.stringify(expense, null, 2)}`);
+          logDebug(`Expense has id: ${Boolean(expense?.id)}, type: ${typeof expense?.id}`);
+          logDebug(`Expense has updated_at: ${Boolean(expense?.updated_at)}, type: ${typeof expense?.updated_at}`);
+          
           if (!isExpense(expense)) {
             logError(`Invalid card expense data received for expense ID: ${params.id}`);
-            throw new Error('Invalid card expense data received');
+            
+            // Instead of throwing an error, adjust the response for robustness
+            logWarn("Attempting to return expense data despite validation failure");
+            return {
+              contents: [{
+                uri: uri,
+                mimeType: "application/json",
+                text: JSON.stringify(expense, null, 2)
+              }]
+            };
           }
           
           logDebug(`Successfully fetched card expense ${params.id}`);

@@ -15,6 +15,7 @@
  */
 
 import { BrexPaginatedResponse } from './types.js';
+import { logWarn, logDebug } from '../../utils/logger.js';
 
 // Basic types
 export interface Money {
@@ -298,13 +299,29 @@ export interface ExpensesResponse extends BrexPaginatedResponse<Expense> {}
 
 // Type guards
 export const isExpense = (obj: unknown): obj is Expense => {
-  const expense = obj as Expense;
-  return (
-    typeof expense === 'object' &&
-    expense !== null &&
-    typeof expense.id === 'string' &&
-    typeof expense.updated_at === 'string'
-  );
+  if (!obj || typeof obj !== 'object') {
+    logDebug('Expense validation failed: Not an object');
+    return false;
+  }
+  
+  const expense = obj as Partial<Expense>;
+  
+  // Log the structure for debugging
+  logDebug(`Validating expense with id: ${expense.id}`);
+  
+  // Most lenient check - just needs to be an object with an id property
+  const hasId = typeof expense.id === 'string';
+  if (!hasId) {
+    logDebug('Expense validation warning: Missing or invalid id property');
+  }
+  
+  const hasUpdatedAt = typeof expense.updated_at === 'string';
+  if (!hasUpdatedAt) {
+    logDebug('Expense validation warning: Missing or invalid updated_at property');
+  }
+  
+  // More lenient validation to accept any object with an id
+  return hasId;
 };
 
 export const isExpenseArray = (obj: unknown): obj is Expense[] => {

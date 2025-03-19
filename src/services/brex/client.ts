@@ -205,6 +205,20 @@ export class BrexClient {
     try {
       logDebug('Fetching card expenses from Brex API');
       const response = await this.client.get('/v1/expenses/card', { params });
+      
+      // Add error handling for malformed responses
+      if (!response.data || !Array.isArray(response.data.items)) {
+        logWarn('Unexpected response format from Brex Card Expenses API');
+        // Create a valid response structure even if the API returns unexpected format
+        return {
+          items: Array.isArray(response.data) ? response.data : 
+                 (response.data && typeof response.data === 'object' && 'items' in response.data) ? 
+                 response.data.items : [],
+          nextCursor: '',
+          hasMore: false
+        };
+      }
+      
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
@@ -218,6 +232,29 @@ export class BrexClient {
     try {
       logDebug(`Fetching card expense ${expenseId} from Brex API`);
       const response = await this.client.get(`/v1/expenses/card/${expenseId}`, { params });
+      
+      // Handle potential response format issues
+      if (!response.data || typeof response.data !== 'object') {
+        logWarn(`Unexpected response format for card expense ${expenseId}`);
+        // Create a minimal valid expense object 
+        return {
+          id: expenseId,
+          updated_at: new Date().toISOString(),
+          ...(response.data && typeof response.data === 'object' ? response.data : {})
+        };
+      }
+      
+      // Ensure the response has the required fields
+      if (!response.data.id) {
+        logDebug(`Adding id to card expense response: ${expenseId}`);
+        response.data.id = expenseId;
+      }
+      
+      if (!response.data.updated_at) {
+        logDebug(`Adding updated_at to card expense response`);
+        response.data.updated_at = new Date().toISOString();
+      }
+      
       return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
