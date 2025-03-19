@@ -317,15 +317,12 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
             const expenses = await brexClient.getCardExpenses(listParams);
             logDebug(`Successfully fetched ${expenses.items.length} card expenses`);
             
-            // Validate returned items
+            // No validation required - accept all items
             if (expenses.items.length > 0) {
               logDebug(`First card expense item structure: ${JSON.stringify(expenses.items[0], null, 2)}`);
-              const validItems = expenses.items.filter(isExpense);
-              logDebug(`Valid expense items: ${validItems.length}/${expenses.items.length}`);
-              
-              if (validItems.length < expenses.items.length) {
-                logWarn("Some card expenses failed validation but will still be returned");
-              }
+              // Skip validation filter and use all items directly
+              // const validItems = expenses.items.filter(isExpense);
+              // logDebug(`Valid expense items: ${validItems.length}/${expenses.items.length}`);
             }
             
             // Ensure all items have required fields (id and updated_at)
@@ -375,13 +372,15 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
             
             // Add detailed logging for debugging
             logDebug(`Received card expense data: ${JSON.stringify(expense, null, 2)}`);
-            logDebug(`Expense has id: ${Boolean(expense?.id)}, type: ${typeof expense?.id}`);
-            logDebug(`Expense has updated_at: ${Boolean(expense?.updated_at)}, type: ${typeof expense?.updated_at}`);
+            
+            // Skip validation - accept all expense objects
+            // Instead, simply ensure required fields are present with fallbacks
             
             // Ensure expense has required fields
             const normalizedExpense = { ...expense };
             if (!normalizedExpense.id) normalizedExpense.id = params.id;
             if (!normalizedExpense.updated_at) normalizedExpense.updated_at = new Date().toISOString();
+            if (!normalizedExpense.status) normalizedExpense.status = ExpenseStatus.SUBMITTED; // Default status
             
             // Always return the data, even if validation would fail
             return {
