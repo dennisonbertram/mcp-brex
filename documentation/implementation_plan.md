@@ -54,6 +54,40 @@
 - [ ] Implement `departments://list` endpoint
 - [ ] Implement `locations://list` endpoint
 
+## Phase 3: Expenses API Implementation (Week 5-6)
+
+### 1. Expenses Core Setup
+- [ ] Add expense type definitions from Swagger schema
+- [ ] Create expense models and interfaces
+- [ ] Set up expense API endpoints in the client
+- [ ] Implement error handling specific to expenses
+
+### 2. Expenses Resources
+- [ ] Implement `brex://expenses/list` endpoint
+  - Connect to Brex `/v1/expenses` API
+  - Add pagination and filtering
+  - Handle response formatting
+- [ ] Implement `brex://expenses/{id}` endpoint
+  - Add proper error handling
+  - Implement response caching
+
+### 3. Card Expenses Resources
+- [ ] Implement `brex://expenses/card/list` endpoint
+  - Connect to Brex `/v1/expenses/card` API
+  - Add pagination and filtering
+  - Handle response formatting
+- [ ] Implement `brex://expenses/card/{id}` endpoint
+  - Add proper error handling
+  - Implement response caching
+
+### 4. Receipt Management
+- [ ] Implement `brex://expenses/card/receipt_match` endpoint
+  - Connect to Brex `/v1/expenses/card/receipt_match` API
+  - Handle file upload process
+- [ ] Implement `brex://expenses/card/{id}/receipt_upload` endpoint
+  - Connect to Brex `/v1/expenses/card/{expense_id}/receipt_upload` API
+  - Handle file upload process
+
 ## Brex API v2 Migration Notes
 
 ### API Changes Discovered
@@ -72,7 +106,7 @@
 - Account schema now matches the v2 API response format
 - Transaction data is now accessed through statements endpoint
 
-## Phase 3: Budget and Expense Resources (Week 5-6)
+## Phase 4: Budget and Expense Resources (Week 7-8)
 
 ### 1. Budget Resources
 - [ ] Implement `budgets://list` endpoint
@@ -82,15 +116,7 @@
   - Add proper error handling for non-existent budgets
   - Implement caching for frequently accessed budgets
 
-### 2. Expense Resources
-- [ ] Implement `expenses://list` endpoint
-  - Connect to Brex expenses API
-  - Add filtering capabilities
-- [ ] Implement `expenses://{id}` endpoint
-  - Add proper error handling
-  - Implement response caching
-
-## Phase 4: Optimization and Documentation (Week 7-8)
+## Phase 5: Optimization and Documentation (Week 9-10)
 
 ### 1. Performance Optimization
 - [ ] Implement intelligent caching strategy
@@ -136,6 +162,43 @@ interface Account {
   routing_number?: string;
   primary: boolean;
 }
+```
+
+### Expense Resource Schema
+```typescript
+interface Expense {
+  id: string;
+  memo?: string;
+  original_amount?: Money;
+  billing_amount?: Money;
+  purchased_at?: string;
+  updated_at: string;
+  category?: string;
+  merchant_id?: string;
+  merchant?: Merchant;
+  location_id?: string;
+  department_id?: string;
+  status?: ExpenseStatus;
+  payment_status?: ExpensePaymentStatus;
+  expense_type?: ExpenseType;
+  receipts?: Receipt[];
+  user_id?: string;
+}
+
+interface Merchant {
+  raw_descriptor: string;
+  mcc: string;
+  country: string;
+}
+
+type ExpenseStatus = 
+  'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'OUT_OF_POLICY' | 
+  'VOID' | 'CANCELED' | 'SPLIT' | 'SETTLED';
+
+type ExpensePaymentStatus = 
+  'NOT_STARTED' | 'PROCESSING' | 'CANCELED' | 'DECLINED' | 
+  'CLEARED' | 'REFUNDING' | 'REFUNDED' | 'CASH_ADVANCE' | 
+  'CREDITED' | 'AWAITING_PAYMENT' | 'SCHEDULED';
 ```
 
 ### Budget Resource Schema
@@ -185,5 +248,5 @@ For each resource endpoint:
 1. Implement health check endpoint
 2. Add caching layer for accounts and transactions
 3. Write integration tests for existing functionality
-4. Implement remaining team resources
-5. Begin work on budget and expense resources 
+4. Implement expenses API integration
+5. Complete team resources implementation 

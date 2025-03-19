@@ -2,7 +2,7 @@
  * @file Brex API Client
  * @version 1.0.0
  * @status STABLE - DO NOT MODIFY WITHOUT TESTS
- * @lastModified 2024-02-14
+ * @lastModified 2024-03-19
  * 
  * Brex API client implementation
  * 
@@ -12,6 +12,8 @@
  * 
  * Functionality:
  * - Fetch accounts and transactions
+ * - Fetch and manage expenses
+ * - Upload and manage receipts
  * - Handle authentication and errors
  * - Implement rate limiting
  */
@@ -20,6 +22,16 @@ import axios, { AxiosInstance, AxiosError } from 'axios';
 import { appConfig } from '../../config/index.js';
 import { logError, logInfo, logWarn, logDebug } from '../../utils/logger.js';
 import { BrexAccount, BrexTransaction, BrexPaginatedResponse } from './types.js';
+import {
+  Expense,
+  SimpleExpense,
+  ExpensesResponse,
+  ListExpensesParams,
+  UpdateExpenseRequest,
+  ReceiptMatchRequest,
+  ReceiptUploadRequest,
+  CreateAsyncFileUploadResponse
+} from './expenses-types.js';
 
 export class BrexClient {
   private client: AxiosInstance;
@@ -66,6 +78,7 @@ export class BrexClient {
     );
   }
 
+  // Accounts API
   async getAccounts(): Promise<BrexPaginatedResponse<BrexAccount>> {
     try {
       logDebug('Fetching accounts from Brex API using v2/accounts/cash endpoint');
@@ -109,6 +122,7 @@ export class BrexClient {
     }
   }
 
+  // Transactions API
   async getTransactions(
     accountId: string,
     cursor?: string,
@@ -144,6 +158,7 @@ export class BrexClient {
     }
   }
 
+  // User API
   async getCurrentUser() {
     try {
       const response = await this.client.get('/v2/users/me');
@@ -153,6 +168,124 @@ export class BrexClient {
         throw new Error(`Brex API authentication failed: Please check your API key in the .env file`);
       }
       throw error;
+    }
+  }
+
+  // Expenses API
+  async getExpenses(params?: ListExpensesParams): Promise<ExpensesResponse> {
+    try {
+      logDebug('Fetching expenses from Brex API');
+      const response = await this.client.get('/v1/expenses', { params });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        throw new Error(`Brex API authentication failed: Please check your API key in the .env file`);
+      }
+      throw error;
+    }
+  }
+
+  async getExpense(expenseId: string, params?: { expand?: string[], load_custom_fields?: boolean }): Promise<Expense> {
+    try {
+      logDebug(`Fetching expense ${expenseId} from Brex API`);
+      const response = await this.client.get(`/v1/expenses/${expenseId}`, { params });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        throw new Error(`Brex API authentication failed: Please check your API key in the .env file`);
+      } else if (axios.isAxiosError(error) && error.response?.status === 404) {
+        throw new Error(`Expense with ID ${expenseId} not found`);
+      }
+      throw error;
+    }
+  }
+
+  // Card Expenses API
+  async getCardExpenses(params?: ListExpensesParams): Promise<ExpensesResponse> {
+    try {
+      logDebug('Fetching card expenses from Brex API');
+      const response = await this.client.get('/v1/expenses/card', { params });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        throw new Error(`Brex API authentication failed: Please check your API key in the .env file`);
+      }
+      throw error;
+    }
+  }
+
+  async getCardExpense(expenseId: string, params?: { expand?: string[], load_custom_fields?: boolean }): Promise<Expense> {
+    try {
+      logDebug(`Fetching card expense ${expenseId} from Brex API`);
+      const response = await this.client.get(`/v1/expenses/card/${expenseId}`, { params });
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        throw new Error(`Brex API authentication failed: Please check your API key in the .env file`);
+      } else if (axios.isAxiosError(error) && error.response?.status === 404) {
+        throw new Error(`Card expense with ID ${expenseId} not found`);
+      }
+      throw error;
+    }
+  }
+
+  async updateCardExpense(expenseId: string, updateData: UpdateExpenseRequest): Promise<SimpleExpense> {
+    try {
+      logDebug(`Updating card expense ${expenseId} in Brex API`);
+      const response = await this.client.put(`/v1/expenses/card/${expenseId}`, updateData);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        throw new Error(`Brex API authentication failed: Please check your API key in the .env file`);
+      } else if (axios.isAxiosError(error) && error.response?.status === 404) {
+        throw new Error(`Card expense with ID ${expenseId} not found`);
+      }
+      throw error;
+    }
+  }
+
+  // Receipt API
+  async createReceiptMatch(request: ReceiptMatchRequest): Promise<CreateAsyncFileUploadResponse> {
+    try {
+      logDebug('Creating receipt match in Brex API');
+      const response = await this.client.post('/v1/expenses/card/receipt_match', request);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        throw new Error(`Brex API authentication failed: Please check your API key in the .env file`);
+      }
+      throw error;
+    }
+  }
+
+  async createReceiptUpload(expenseId: string, request: ReceiptUploadRequest): Promise<CreateAsyncFileUploadResponse> {
+    try {
+      logDebug(`Creating receipt upload for expense ${expenseId} in Brex API`);
+      const response = await this.client.post(`/v1/expenses/card/${expenseId}/receipt_upload`, request);
+      return response.data;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        throw new Error(`Brex API authentication failed: Please check your API key in the .env file`);
+      } else if (axios.isAxiosError(error) && error.response?.status === 404) {
+        throw new Error(`Card expense with ID ${expenseId} not found`);
+      }
+      throw error;
+    }
+  }
+
+  // File upload helper
+  async uploadFileToS3(url: string, fileContent: Buffer, contentType: string): Promise<void> {
+    try {
+      logDebug('Uploading file to pre-signed S3 URL');
+      await axios.put(url, fileContent, {
+        headers: {
+          'Content-Type': contentType,
+        },
+      });
+      logDebug('File uploaded successfully');
+    } catch (error) {
+      logError('Failed to upload file to S3', { error });
+      throw new Error('Failed to upload file: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
 } 
