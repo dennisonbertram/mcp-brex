@@ -307,21 +307,21 @@ export const isExpense = (obj: unknown): obj is Expense => {
   const expense = obj as Partial<Expense>;
   
   // Log the structure for debugging
-  logDebug(`Validating expense with id: ${expense.id}`);
+  logDebug(`Validating expense with keys: ${Object.keys(expense).join(', ')}`);
   
-  // Most lenient check - just needs to be an object with an id property
-  const hasId = typeof expense.id === 'string';
-  if (!hasId) {
-    logDebug('Expense validation warning: Missing or invalid id property');
+  // Most lenient check - any object with something that identifies it
+  // Either id, merchant_id, or spending_entity_id should be present
+  const hasIdentifier = 
+    typeof expense.id === 'string' || 
+    typeof expense.merchant_id === 'string' || 
+    typeof expense.spending_entity_id === 'string';
+  
+  if (!hasIdentifier) {
+    logDebug('Expense validation warning: No identifier property found (id, merchant_id, or spending_entity_id)');
   }
   
-  const hasUpdatedAt = typeof expense.updated_at === 'string';
-  if (!hasUpdatedAt) {
-    logDebug('Expense validation warning: Missing or invalid updated_at property');
-  }
-  
-  // More lenient validation to accept any object with an id
-  return hasId;
+  // We'll consider it a valid expense if it has any identifier
+  return hasIdentifier;
 };
 
 export const isExpenseArray = (obj: unknown): obj is Expense[] => {
