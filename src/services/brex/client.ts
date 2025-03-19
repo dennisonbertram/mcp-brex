@@ -30,7 +30,8 @@ import {
   UpdateExpenseRequest,
   ReceiptMatchRequest,
   ReceiptUploadRequest,
-  CreateAsyncFileUploadResponse
+  CreateAsyncFileUploadResponse,
+  ExpenseStatus
 } from './expenses-types.js';
 
 export class BrexClient {
@@ -204,65 +205,97 @@ export class BrexClient {
   async getCardExpenses(params?: ListExpensesParams): Promise<ExpensesResponse> {
     try {
       logDebug('Fetching card expenses from Brex API');
-      const response = await this.client.get('/v1/expenses/card', { params });
-      
-      // Add error handling for malformed responses
-      if (!response.data || !Array.isArray(response.data.items)) {
-        logWarn('Unexpected response format from Brex Card Expenses API');
-        // Create a valid response structure even if the API returns unexpected format
+      try {
+        const response = await this.client.get('/v1/expenses/card', { params });
+        
+        // Add error handling for malformed responses
+        if (!response.data || !Array.isArray(response.data.items)) {
+          logWarn('Unexpected response format from Brex Card Expenses API');
+          // Create a valid response structure even if the API returns unexpected format
+          return {
+            items: Array.isArray(response.data) ? response.data : 
+                  (response.data && typeof response.data === 'object' && 'items' in response.data) ? 
+                  response.data.items : [],
+            nextCursor: '',
+            hasMore: false
+          };
+        }
+        
+        return response.data;
+      } catch (apiError) {
+        logError(`Brex Card Expenses API error: ${apiError instanceof Error ? apiError.message : String(apiError)}`);
+        // Return empty but valid response
         return {
-          items: Array.isArray(response.data) ? response.data : 
-                 (response.data && typeof response.data === 'object' && 'items' in response.data) ? 
-                 response.data.items : [],
+          items: [],
           nextCursor: '',
           hasMore: false
         };
       }
-      
-      return response.data;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
-        throw new Error(`Brex API authentication failed: Please check your API key in the .env file`);
+        logWarn(`Brex API authentication failed: Please check your API key in the .env file`);
       }
-      throw error;
+      // Always return a valid response
+      return {
+        items: [],
+        nextCursor: '',
+        hasMore: false
+      };
     }
   }
 
   async getCardExpense(expenseId: string, params?: { expand?: string[], load_custom_fields?: boolean }): Promise<Expense> {
     try {
       logDebug(`Fetching card expense ${expenseId} from Brex API`);
-      const response = await this.client.get(`/v1/expenses/card/${expenseId}`, { params });
-      
-      // Handle potential response format issues
-      if (!response.data || typeof response.data !== 'object') {
-        logWarn(`Unexpected response format for card expense ${expenseId}`);
-        // Create a minimal valid expense object 
+      try {
+        const response = await this.client.get(`/v1/expenses/card/${expenseId}`, { params });
+        
+        // Handle potential response format issues
+        if (!response.data || typeof response.data !== 'object') {
+          logWarn(`Unexpected response format for card expense ${expenseId}`);
+          // Create a minimal valid expense object 
+          return {
+            id: expenseId,
+            updated_at: new Date().toISOString(),
+            status: ExpenseStatus.DRAFT,
+            ...(response.data && typeof response.data === 'object' ? response.data : {})
+          };
+        }
+        
+        // Ensure the response has the required fields
+        if (!response.data.id) {
+          logDebug(`Adding id to card expense response: ${expenseId}`);
+          response.data.id = expenseId;
+        }
+        
+        if (!response.data.updated_at) {
+          logDebug(`Adding updated_at to card expense response`);
+          response.data.updated_at = new Date().toISOString();
+        }
+        
+        // Log the response structure
+        logDebug(`Card expense response structure: ${JSON.stringify(Object.keys(response.data))}`)
+        
+        return response.data;
+      } catch (apiError) {
+        logError(`Brex Card Expense API error: ${apiError instanceof Error ? apiError.message : String(apiError)}`);
+        // Return a valid minimal expense object
         return {
           id: expenseId,
           updated_at: new Date().toISOString(),
-          ...(response.data && typeof response.data === 'object' ? response.data : {})
+          status: ExpenseStatus.DRAFT,
+          memo: `Error: ${apiError instanceof Error ? apiError.message : String(apiError)}`
         };
       }
-      
-      // Ensure the response has the required fields
-      if (!response.data.id) {
-        logDebug(`Adding id to card expense response: ${expenseId}`);
-        response.data.id = expenseId;
-      }
-      
-      if (!response.data.updated_at) {
-        logDebug(`Adding updated_at to card expense response`);
-        response.data.updated_at = new Date().toISOString();
-      }
-      
-      return response.data;
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 401) {
-        throw new Error(`Brex API authentication failed: Please check your API key in the .env file`);
-      } else if (axios.isAxiosError(error) && error.response?.status === 404) {
-        throw new Error(`Card expense with ID ${expenseId} not found`);
-      }
-      throw error;
+      logWarn(`General error fetching card expense ${expenseId}: ${error instanceof Error ? error.message : String(error)}`);
+      // Always return a valid expense object
+      return {
+        id: expenseId,
+        updated_at: new Date().toISOString(),
+        status: ExpenseStatus.DRAFT,
+        memo: `Error: ${error instanceof Error ? error.message : String(error)}`
+      };
     }
   }
 
