@@ -1,12 +1,22 @@
 #!/usr/bin/env node
 
 /**
- * This is a template MCP server that implements a simple notes system.
- * It demonstrates core MCP concepts like resources and tools by allowing:
- * - Listing notes as resources
- * - Reading individual notes
- * - Creating new notes via a tool
- * - Summarizing all notes via a prompt
+ * @file Brex MCP Server
+ * @version 1.0.0
+ * @status STABLE - DO NOT MODIFY WITHOUT TESTS
+ * @lastModified 2024-02-14
+ * 
+ * MCP server implementation for Brex API integration
+ * 
+ * IMPORTANT:
+ * - Add tests for any new functionality
+ * - Handle errors appropriately
+ * 
+ * Functionality:
+ * - List Brex accounts as resources
+ * - Read account details and transactions
+ * - Fetch transactions via tools
+ * - Summarize transactions via prompts
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -19,25 +29,13 @@ import {
   ListPromptsRequestSchema,
   GetPromptRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
+import { BrexClient } from "./services/brex/client.js";
+import { logError, logInfo } from "./utils/logger.js";
+import { isBrexAccount, isBrexTransaction } from "./services/brex/types.js";
 
-/**
- * Type alias for a note object.
- */
-type Note = { title: string, content: string };
+// Initialize Brex client
+const brexClient = new BrexClient();
 
-/**
- * Simple in-memory storage for notes.
- * In a real implementation, this would likely be backed by a database.
- */
-const notes: { [id: string]: Note } = {
-  "1": { title: "First Note", content: "This is note 1" },
-  "2": { title: "Second Note", content: "This is note 2" }
-};
-
-/**
- * Create an MCP server with capabilities for resources (to list/read notes),
- * tools (to create new notes), and prompts (to summarize notes).
- */
 const server = new Server(
   {
     name: "brex-server",
@@ -52,171 +50,178 @@ const server = new Server(
   }
 );
 
-/**
- * Handler for listing available notes as resources.
- * Each note is exposed as a resource with:
- * - A note:// URI scheme
- * - Plain text MIME type
- * - Human readable name and description (now including the note title)
- */
+// List Brex accounts as resources
 server.setRequestHandler(ListResourcesRequestSchema, async () => {
-  return {
-    resources: Object.entries(notes).map(([id, note]) => ({
-      uri: `note:///${id}`,
-      mimeType: "text/plain",
-      name: note.title,
-      description: `A text note: ${note.title}`
-    }))
-  };
-});
-
-/**
- * Handler for reading the contents of a specific note.
- * Takes a note:// URI and returns the note content as plain text.
- */
-server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
-  const url = new URL(request.params.uri);
-  const id = url.pathname.replace(/^\//, '');
-  const note = notes[id];
-
-  if (!note) {
-    throw new Error(`Note ${id} not found`);
+  try {
+    const accounts = await brexClient.getAccounts();
+    return {
+      resources: accounts.items.map(account => ({
+        uri: `brex://accounts/${account.id}`,
+        mimeType: "application/json",
+        name: account.name,
+        description: `Brex ${account.type} Account: ${account.name} (${account.currency})`
+      }))
+    };
+  } catch (error) {
+    logError(error as Error);
+    throw error;
   }
-
-  return {
-    contents: [{
-      uri: request.params.uri,
-      mimeType: "text/plain",
-      text: note.content
-    }]
-  };
 });
 
-/**
- * Handler that lists available tools.
- * Exposes a single "create_note" tool that lets clients create new notes.
- */
-server.setRequestHandler(ListToolsRequestSchema, async () => {
-  return {
-    tools: [
-      {
-        name: "create_note",
-        description: "Create a new note",
-        inputSchema: {
-          type: "object",
-          properties: {
-            title: {
-              type: "string",
-              description: "Title of the note"
-            },
-            content: {
-              type: "string",
-              description: "Text content of the note"
-            }
-          },
-          required: ["title", "content"]
-        }
-      }
-    ]
-  };
-});
+// Read account details or transactions
+server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+  try {
+    const url = new URL(request.params.uri);
+    const [resourceType, id] = url.pathname.replace(/^\//, '').split('/');
 
-/**
- * Handler for the create_note tool.
- * Creates a new note with the provided title and content, and returns success message.
- */
-server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  switch (request.params.name) {
-    case "create_note": {
-      const title = String(request.params.arguments?.title);
-      const content = String(request.params.arguments?.content);
-      if (!title || !content) {
-        throw new Error("Title and content are required");
+    if (resourceType === 'accounts') {
+      const account = await brexClient.getAccount(id);
+      if (!isBrexAccount(account)) {
+        throw new Error('Invalid account data received');
       }
-
-      const id = String(Object.keys(notes).length + 1);
-      notes[id] = { title, content };
 
       return {
-        content: [{
-          type: "text",
-          text: `Created note ${id}: ${title}`
+        contents: [{
+          uri: request.params.uri,
+          mimeType: "application/json",
+          text: JSON.stringify(account, null, 2)
         }]
       };
     }
 
-    default:
-      throw new Error("Unknown tool");
+    throw new Error(`Unknown resource type: ${resourceType}`);
+  } catch (error) {
+    logError(error as Error);
+    throw error;
   }
 });
 
-/**
- * Handler that lists available prompts.
- * Exposes a single "summarize_notes" prompt that summarizes all notes.
- */
+// List available tools
+server.setRequestHandler(ListToolsRequestSchema, async () => {
+  return {
+    tools: [
+      {
+        name: "get_transactions",
+        description: "Get transactions for a Brex account",
+        inputSchema: {
+          type: "object",
+          properties: {
+            accountId: {
+              type: "string",
+              description: "ID of the Brex account"
+            },
+            limit: {
+              type: "number",
+              description: "Maximum number of transactions to return (default: 50)"
+            }
+          },
+          required: ["accountId"]
+        }
+      }
+    ]
+  };
+});
+
+// Handle tool calls
+server.setRequestHandler(CallToolRequestSchema, async (request) => {
+  try {
+    switch (request.params.name) {
+      case "get_transactions": {
+        const accountId = String(request.params.arguments?.accountId);
+        const limit = Number(request.params.arguments?.limit) || 50;
+
+        const transactions = await brexClient.getTransactions(accountId, undefined, limit);
+        
+        if (!transactions.items.every(isBrexTransaction)) {
+          throw new Error('Invalid transaction data received');
+        }
+
+        return {
+          content: [{
+            type: "text",
+            text: JSON.stringify(transactions, null, 2)
+          }]
+        };
+      }
+
+      default:
+        throw new Error("Unknown tool");
+    }
+  } catch (error) {
+    logError(error as Error);
+    throw error;
+  }
+});
+
+// List available prompts
 server.setRequestHandler(ListPromptsRequestSchema, async () => {
   return {
     prompts: [
       {
-        name: "summarize_notes",
-        description: "Summarize all notes",
+        name: "summarize_transactions",
+        description: "Summarize transactions for a Brex account",
       }
     ]
   };
 });
 
-/**
- * Handler for the summarize_notes prompt.
- * Returns a prompt that requests summarization of all notes, with the notes' contents embedded as resources.
- */
+// Handle prompt requests
 server.setRequestHandler(GetPromptRequestSchema, async (request) => {
-  if (request.params.name !== "summarize_notes") {
+  if (request.params.name !== "summarize_transactions") {
     throw new Error("Unknown prompt");
   }
 
-  const embeddedNotes = Object.entries(notes).map(([id, note]) => ({
-    type: "resource" as const,
-    resource: {
-      uri: `note:///${id}`,
-      mimeType: "text/plain",
-      text: note.content
-    }
-  }));
-
-  return {
-    messages: [
-      {
-        role: "user",
-        content: {
-          type: "text",
-          text: "Please summarize the following notes:"
-        }
-      },
-      ...embeddedNotes.map(note => ({
-        role: "user" as const,
-        content: note
-      })),
-      {
-        role: "user",
-        content: {
-          type: "text",
-          text: "Provide a concise summary of all the notes above."
-        }
+  try {
+    const accounts = await brexClient.getAccounts();
+    
+    const embeddedResources = accounts.items.map(account => ({
+      type: "resource" as const,
+      resource: {
+        uri: `brex://accounts/${account.id}`,
+        mimeType: "application/json",
+        text: JSON.stringify(account, null, 2)
       }
-    ]
-  };
+    }));
+
+    return {
+      messages: [
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: "Please analyze the following Brex accounts:"
+          }
+        },
+        ...embeddedResources.map(resource => ({
+          role: "user" as const,
+          content: resource
+        })),
+        {
+          role: "user",
+          content: {
+            type: "text",
+            text: "Provide a summary of the accounts, including total balances by currency and account status."
+          }
+        }
+      ]
+    };
+  } catch (error) {
+    logError(error as Error);
+    throw error;
+  }
 });
 
-/**
- * Start the server using stdio transport.
- * This allows the server to communicate via standard input/output streams.
- */
+// Start the server
 async function main() {
-  const transport = new StdioServerTransport();
-  await server.connect(transport);
+  try {
+    logInfo("Starting Brex MCP server...");
+    const transport = new StdioServerTransport();
+    await server.connect(transport);
+    logInfo("Brex MCP server started successfully");
+  } catch (error) {
+    logError(error as Error);
+    process.exit(1);
+  }
 }
 
-main().catch((error) => {
-  console.error("Server error:", error);
-  process.exit(1);
-});
+main();
