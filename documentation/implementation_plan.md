@@ -23,30 +23,54 @@
 - Brex API client implemented with authentication and rate limiting
 - Base MCP server implemented with stdio transport
 - Type definitions and guards created for Brex API responses
+- Fixed Brex API client to use v2 endpoints after discovering API changes
 
 ## Phase 2: Resource Implementation (Week 3-4)
 
 ### 1. Transaction Resources
 - [x] Implement transaction fetching functionality
-  - Connected to Brex `/v2/transactions` API
+  - Updated to use Brex `/v2/accounts/cash/{id}/statements` API
   - Added pagination handling
   - Implemented type validation
+  - Added fallback mechanisms for endpoint changes
 - [ ] Add caching layer
 - [ ] Implement transaction filtering
 
 ### 2. Account Resources
 - [x] Implement account listing functionality
-  - Connected to Brex accounts API
+  - Connected to Brex v2 cash accounts API (`/v2/accounts/cash`)
   - Formatted response according to MCP schema
   - Implemented proper error handling
 - [x] Implement account details endpoint
   - Added type validation
   - Implemented error handling
+  - Added fallback mechanisms for retrieving specific accounts
 
 ### 3. Team Resources
+- [x] Implement current user endpoint
+  - Connected to `/v2/users/me` API
+  - Added proper error handling
 - [ ] Implement `users://list` endpoint
 - [ ] Implement `departments://list` endpoint
 - [ ] Implement `locations://list` endpoint
+
+## Brex API v2 Migration Notes
+
+### API Changes Discovered
+- The Brex API has undergone significant changes in its endpoint structure
+- The v1 endpoints for accounts and transactions are no longer available
+- New endpoints use a more resource-specific structure (e.g., `/v2/accounts/cash`)
+
+### Implementation Updates
+- Updated client to use the v2 endpoints
+- Added user information endpoint through `/v2/users/me`
+- Implemented fallback mechanisms for when direct endpoints are not available
+- Added improved error handling for API-specific errors (401, 404)
+- Updated logging to include more detailed debug information
+
+### Type Updates
+- Account schema now matches the v2 API response format
+- Transaction data is now accessed through statements endpoint
 
 ## Phase 3: Budget and Expense Resources (Week 5-6)
 
@@ -84,6 +108,7 @@
 - [x] Verify no sensitive data exposure
 - [x] Implement rate limiting
 - [x] Implement error handling
+- [x] Improve authentication error handling
 
 ## Resource Schema Implementation Details
 
@@ -106,10 +131,10 @@ interface Transaction {
 interface Account {
   id: string;
   name: string;
-  type: "CASH" | "CARD";
-  balance: Money;
-  status: "ACTIVE" | "INACTIVE";
-  description?: string;
+  current_balance: Money;
+  available_balance: Money;
+  routing_number?: string;
+  primary: boolean;
 }
 ```
 
@@ -142,7 +167,7 @@ For each resource endpoint:
 - [x] Ensure proper token handling
 - [x] Verify rate limiting effectiveness
 - [x] Check error message information exposure
-- [ ] Test authentication edge cases
+- [x] Test authentication edge cases
 - [ ] Verify proper HTTPS usage
 - [x] Check logging for sensitive data
 
