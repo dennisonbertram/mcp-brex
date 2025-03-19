@@ -86,8 +86,15 @@ class ResourceTemplate {
   }
 }
 
-// Initialize Brex client
-const brexClient = new BrexClient();
+// Initialize Brex client lazily - only create it when actually needed
+let _brexClient: BrexClient | null = null;
+function getBrexClient(): BrexClient {
+  if (!_brexClient) {
+    logInfo("Initializing Brex client for the first time");
+    _brexClient = new BrexClient();
+  }
+  return _brexClient;
+}
 
 // Define resource templates
 const accountsTemplate = new ResourceTemplate("brex://accounts{/id}");
@@ -122,10 +129,14 @@ const server = new Server(
 );
 
 // List available resources without making API calls
-server.setRequestHandler(ListResourcesRequestSchema, async () => {
-  logDebug("Listing available Brex resources");
-  return {
-    resources: [
+server.setRequestHandler(ListResourcesRequestSchema, async (request) => {
+  try {
+    logInfo("===== LIST RESOURCES START =====");
+    logDebug("Request to list available Brex resources received");
+    
+    // Define our resources statically - no API calls
+    // Use simple URIs (not templates) for listing
+    const resources = [
       {
         uri: "brex://accounts",
         mimeType: "application/json",
@@ -144,8 +155,40 @@ server.setRequestHandler(ListResourcesRequestSchema, async () => {
         name: "Brex Card Expenses",
         description: "List of all Brex card expenses"
       }
-    ]
-  };
+    ];
+    
+    logDebug(`Responding with ${resources.length} available resources: ${resources.map(r => r.uri).join(', ')}`);
+    logInfo("===== LIST RESOURCES END =====");
+    
+    // Return immediately without any async operations
+    return { resources };
+  } catch (error) {
+    logError(`Error in ListResourcesRequestSchema handler: ${error instanceof Error ? error.message : String(error)}`);
+    logError("Stack trace: " + (error instanceof Error ? error.stack : "Not available"));
+    // Still need to return resources even if logging fails
+    return {
+      resources: [
+        {
+          uri: "brex://accounts",
+          mimeType: "application/json",
+          name: "Brex Accounts",
+          description: "List of all Brex accounts"
+        },
+        {
+          uri: "brex://expenses",
+          mimeType: "application/json",
+          name: "Brex Expenses",
+          description: "List of all Brex expenses"
+        },
+        {
+          uri: "brex://expenses/card",
+          mimeType: "application/json",
+          name: "Brex Card Expenses",
+          description: "List of all Brex card expenses"
+        }
+      ]
+    };
+  }
 });
 
 // Read resource contents with API calls
@@ -153,6 +196,9 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
   try {
     const uri = request.params.uri;
     logDebug(`Reading resource: ${uri}`);
+    
+    // Get Brex client only when needed
+    const brexClient = getBrexClient();
     
     // Handle accounts resources
     if (accountsTemplate.match(uri)) {
@@ -390,6 +436,9 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 // Handle tool calls
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
+    // Get Brex client only when needed
+    const brexClient = getBrexClient();
+    
     switch (request.params.name) {
       case "get_transactions": {
         const accountId = String(request.params.arguments?.accountId);
@@ -491,6 +540,9 @@ server.setRequestHandler(ListPromptsRequestSchema, async () => {
 
 // Handle prompt requests
 server.setRequestHandler(GetPromptRequestSchema, async (request) => {
+  // Get Brex client only when needed
+  const brexClient = getBrexClient();
+  
   if (request.params.name === "summarize_transactions") {
     try {
       const accounts = await brexClient.getAccounts();
@@ -577,12 +629,23 @@ server.setRequestHandler(GetPromptRequestSchema, async (request) => {
 // Start the server
 async function main() {
   try {
+    logInfo("===== SERVER STARTUP BEGIN =====");
     logInfo("Starting Brex MCP server...");
+    
+    // Create transport
+    logDebug("Creating StdioServerTransport");
     const transport = new StdioServerTransport();
+    
+    // Connect server to transport
+    logDebug("Connecting server to transport");
     await server.connect(transport);
+    
     logInfo("Brex MCP server started successfully");
+    logInfo("===== SERVER STARTUP COMPLETE =====");
   } catch (error) {
-    logError(error as Error);
+    logError("===== SERVER STARTUP FAILED =====");
+    logError(`Error: ${error instanceof Error ? error.message : String(error)}`);
+    logError("Stack trace: " + (error instanceof Error ? error.stack : "Not available"));
     process.exit(1);
   }
 }
