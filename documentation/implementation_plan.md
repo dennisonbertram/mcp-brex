@@ -428,3 +428,131 @@ For each resource endpoint:
 3. Write integration tests for existing functionality
 4. Implement expenses API integration
 5. Complete team resources implementation
+
+## Brex Expenses API Integration Plan
+
+Based on the analysis of the expenses-swagger.json file, the following endpoints can be integrated into the MCP server:
+
+### 1. List Expenses Endpoints
+
+#### GET /v1/expenses
+- **MCP Resource URI**: `brex://expenses{/id}`
+- **Description**: Retrieves a list of all expenses or a specific expense by ID
+- **Features**:
+  - Pagination support via cursor and limit parameters
+  - Extensive filtering options (user_id, budget_id, expense_type, status, etc.)
+  - Date range filtering (purchased_at_start/end, updated_at_start/end)
+  - Expandable fields for additional details (merchant, location, department, etc.)
+  - Custom fields support
+- **Implementation Priority**: High (core functionality)
+
+#### GET /v1/expenses/card
+- **MCP Resource URI**: `brex://expenses/card{/id}`
+- **Description**: Retrieves a list of card expenses or a specific card expense by ID
+- **Features**:
+  - Similar filtering capabilities as general expenses endpoint
+  - Card-specific expense details
+  - Pagination support
+  - Expandable fields
+- **Implementation Priority**: High (core functionality)
+
+#### GET /v1/expenses/{id}
+- **MCP Resource URI**: `brex://expenses/{id}`
+- **Description**: Retrieves a specific expense by ID
+- **Features**:
+  - Detailed expense information
+  - Expandable fields for related data
+  - Custom fields support
+- **Implementation Priority**: High (core functionality)
+
+#### GET /v1/expenses/card/{expense_id}
+- **MCP Resource URI**: `brex://expenses/card/{id}`
+- **Description**: Retrieves a specific card expense by ID
+- **Features**:
+  - Detailed card expense information
+  - Expandable fields for related data
+  - Custom fields support
+- **Implementation Priority**: High (core functionality)
+
+### 2. Receipt Management Endpoints
+
+#### POST /v1/expenses/card/receipt_match
+- **MCP Tool Name**: `match_receipt`
+- **Description**: Creates a pre-signed S3 URL for uploading a receipt that will be automatically matched with existing expenses
+- **Features**:
+  - Receipt upload via pre-signed URL
+  - Automatic matching with transactions
+  - Email notification upon completion
+- **Implementation Priority**: Medium
+
+#### POST /v1/expenses/card/{expense_id}/receipt_upload
+- **MCP Tool Name**: `upload_receipt`
+- **Description**: Creates a pre-signed S3 URL for uploading a receipt directly to a specific expense
+- **Features**:
+  - Direct receipt attachment to specific expense
+  - Pre-signed URL with 30-minute validity
+- **Implementation Priority**: Medium
+
+### 3. Expense Management Endpoints
+
+#### PUT /v1/expenses/card/{expense_id}
+- **MCP Tool Name**: `update_expense`
+- **Description**: Updates an existing card expense (memo and other fields)
+- **Features**:
+  - Update expense details
+  - Admin and bookkeeper-specific permissions
+- **Implementation Priority**: Medium
+
+### 4. Implementation Considerations
+
+#### Receipt Upload Implementation
+For receipt upload endpoints, which require file upload capabilities, we recommend the following approach:
+1. Create MCP tools that generate pre-signed URLs for receipt uploads
+2. Return the pre-signed URL to the client along with instructions on how to use it
+3. Provide a webhook or callback mechanism for upload status notification
+
+#### Expandable Fields
+The Brex API supports expandable fields for additional details. MCP implementation should:
+1. Support expansion via query parameters in the resource URI
+2. Implement field expansion logic in the resource handlers
+3. Document the available expansion options for each resource
+
+#### Pagination Strategy
+For list endpoints that return potentially large datasets:
+1. Implement cursor-based pagination support in MCP resources
+2. Return pagination metadata in the response
+3. Support limit parameter to control page size
+4. Provide pagination examples in documentation
+
+#### User Permissions
+The Brex API has different permission levels for regular users vs. admin/bookkeepers:
+1. Implement permission checking in resource handlers
+2. Return appropriate error responses for unauthorized access
+3. Document permission requirements for each endpoint
+
+### 5. Integration Roadmap
+
+1. **Phase 1 (Week 1-2)**
+   - Implement core expense list endpoints (GET /v1/expenses, GET /v1/expenses/card)
+   - Add basic filtering support
+   - Implement single expense retrieval endpoints
+
+2. **Phase 2 (Week 3-4)**
+   - Implement advanced filtering options
+   - Add pagination support
+   - Implement expandable fields functionality
+
+3. **Phase 3 (Week 5-6)**
+   - Implement receipt upload tools
+   - Add receipt management capabilities
+   - Implement expense update functionality
+
+4. **Phase 4 (Week 7-8)**
+   - Add custom fields support
+   - Improve error handling and validation
+   - Optimize performance with caching
+
+5. **Testing and Documentation (Week 9-10)**
+   - Comprehensive testing of all endpoints
+   - Write detailed documentation with examples
+   - Create integration guides for clients
