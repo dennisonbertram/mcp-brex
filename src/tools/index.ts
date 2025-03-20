@@ -13,6 +13,9 @@ import { registerUploadReceipt } from "./uploadReceipt.js";
 import { logError } from "../utils/logger.js";
 import { ExpenseType, ExpenseStatus, ExpensePaymentStatus } from "../services/brex/expenses-types.js";
 
+// Store tool handlers
+const toolHandlers = new Map<string, (request: any) => Promise<any>>();
+
 /**
  * Registers all tools with the server
  * @param server The MCP server instance
@@ -133,15 +136,19 @@ function registerListToolsHandler(server: Server): void {
 function registerCallToolHandler(server: Server): void {
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     try {
-      // Each tool will handle its own invocation
-      switch (request.params.name) {
-        // Tool handlers will be called from their respective modules
-        default:
-          throw new Error(`Unknown tool: ${request.params.name}`);
+      const handler = toolHandlers.get(request.params.name);
+      if (!handler) {
+        throw new Error(`Unknown tool: ${request.params.name}`);
       }
+      return await handler(request);
     } catch (error) {
       logError(error as Error);
       throw error;
     }
   });
+}
+
+// Helper function to register a tool handler
+export function registerToolHandler(name: string, handler: (request: any) => Promise<any>): void {
+  toolHandlers.set(name, handler);
 } 

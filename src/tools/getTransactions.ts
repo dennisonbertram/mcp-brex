@@ -9,6 +9,7 @@ import { CallToolRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { BrexClient } from "../services/brex/client.js";
 import { logDebug, logError } from "../utils/logger.js";
 import { isBrexTransaction } from "../services/brex/types.js";
+import { registerToolHandler } from "./index.js";
 
 // Get Brex client
 function getBrexClient(): BrexClient {
@@ -58,7 +59,7 @@ function validateParams(input: any): GetTransactionsParams {
  * @param server The MCP server instance
  */
 export function registerGetTransactions(server: Server): void {
-  server.registerToolHandler("get_transactions", async (request) => {
+  registerToolHandler("get_transactions", async (request) => {
     try {
       // Validate parameters
       const params = validateParams(request.params.input);
