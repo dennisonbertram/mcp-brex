@@ -12,6 +12,12 @@
     "test": "jest",
     "clean": "rimraf build"
   },
+  "author": {
+    "name": "Dennison Bertram",
+    "email": "dennison@dennisonbertram.com",
+    "url": "https://dennisonbertram.com"
+  },
+  "license": "MIT",
   "dependencies": {
     "@modelcontextprotocol/sdk": "1.7.0",
     "axios": "^1.6.7",
@@ -31,5 +37,9 @@
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dennisonbertram/brex-mcp-server.git"
   }
 }
