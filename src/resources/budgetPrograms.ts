@@ -3,12 +3,19 @@
  * @description Implements resource handlers for Brex budget programs API endpoints
  */
 
-import { ReadResourceRequestSchema } from '@anthropic-ai/sdk';
+import { ReadResourceRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { logDebug, logError } from '../utils/logger.js';
 import { ResourceTemplate } from '../models/resourceTemplate.js';
-import { getBrexClient } from '../services/brex/index.js';
+import { BrexClient } from '../services/brex/client.js';
 import { parseQueryParams } from '../models/common.js';
 import { isBudgetProgram } from '../models/budget.js';
+
+/**
+ * Get Brex client
+ */
+function getBrexClient(): BrexClient {
+  return new BrexClient();
+}
 
 /**
  * Resource template for budget programs API
@@ -32,8 +39,9 @@ export const registerBudgetProgramsResource = (server: any) => {
     
     try {
       const brexClient = getBrexClient();
-      const match = budgetProgramsTemplate.match(uri);
-      const id = match?.id;
+      // Use parse instead of match to get URI parameters
+      const params = budgetProgramsTemplate.parse(uri);
+      const id = params.id;
       
       if (id) {
         // Get single budget program
@@ -51,11 +59,11 @@ export const registerBudgetProgramsResource = (server: any) => {
       } else {
         // List budget programs with pagination
         logDebug('Fetching budget programs list');
-        const params = parseQueryParams(uri);
+        const queryParams = parseQueryParams(uri);
         const budgetProgramsResponse = await brexClient.getBudgetPrograms({
-          cursor: params.cursor,
-          limit: params.limit ? parseInt(params.limit, 10) : undefined,
-          budget_program_status: params.budget_program_status as any
+          cursor: queryParams.cursor,
+          limit: queryParams.limit ? parseInt(queryParams.limit, 10) : undefined,
+          budget_program_status: queryParams.budget_program_status as any
         });
         
         return {

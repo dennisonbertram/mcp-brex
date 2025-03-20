@@ -3,7 +3,7 @@
  * @description TypeScript interfaces for the Brex Budget API
  */
 
-import { Money } from './common';
+import { Money } from './common.js';
 
 /**
  * Period recurrence type for budgets
