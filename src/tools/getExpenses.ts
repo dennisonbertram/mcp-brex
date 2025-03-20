@@ -100,9 +100,21 @@ export function registerGetExpenses(server: Server): void {
       try {
         // Prepare API parameters
         const apiParams: ListExpensesParams = {
-          limit,
-          ...params
+          limit
         };
+        
+        // Add filters if provided, ensuring expense_type is an array
+        if (params.expense_type) {
+          apiParams.expense_type = [params.expense_type];
+        }
+        
+        if (params.status) {
+          apiParams.status = [params.status];
+        }
+        
+        if (params.payment_status) {
+          apiParams.payment_status = [params.payment_status];
+        }
         
         // Call Brex API to get expenses
         const expenses = await brexClient.getExpenses(apiParams);

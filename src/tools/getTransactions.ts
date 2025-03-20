@@ -73,7 +73,7 @@ export function registerGetTransactions(server: Server): void {
       
       try {
         // Call Brex API to get transactions
-        const transactions = await brexClient.getTransactions(params.accountId, { limit });
+        const transactions = await brexClient.getTransactions(params.accountId, JSON.stringify({ limit }));
         
         // Validate transactions data
         if (!transactions || !Array.isArray(transactions.items)) {

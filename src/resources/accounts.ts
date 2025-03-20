@@ -24,7 +24,7 @@ const accountsTemplate = new ResourceTemplate("brex://accounts{/id}");
  * @param server The MCP server instance
  */
 export function registerAccountsResource(server: Server): void {
-  server.registerCapability({
+  server.registerCapabilities({
     resources: {
       "brex://accounts{/id}": {
         description: "Brex accounts",
@@ -33,8 +33,15 @@ export function registerAccountsResource(server: Server): void {
     }
   });
 
-  server.setReadResourceHandler(accountsTemplate, async (request) => {
+  // Use the standard approach with setRequestHandler
+  server.setRequestHandler(ReadResourceRequestSchema, async (request, extra) => {
     const uri = request.params.uri;
+    
+    // Check if this handler should process this URI
+    if (!uri.startsWith("brex://accounts")) {
+      return { handled: false }; // Not handled by this handler
+    }
+    
     logDebug(`Reading account resource: ${uri}`);
     
     // Get Brex client

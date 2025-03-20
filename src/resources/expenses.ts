@@ -24,7 +24,7 @@ const expensesTemplate = new ResourceTemplate("brex://expenses{/id}");
  * @param server The MCP server instance
  */
 export function registerExpensesResource(server: Server): void {
-  server.registerCapability({
+  server.registerCapabilities({
     resources: {
       "brex://expenses{/id}": {
         description: "Brex expenses",
@@ -33,8 +33,15 @@ export function registerExpensesResource(server: Server): void {
     }
   });
 
-  server.setReadResourceHandler(expensesTemplate, async (request) => {
+  // Use the standard approach with setRequestHandler
+  server.setRequestHandler(ReadResourceRequestSchema, async (request, extra) => {
     const uri = request.params.uri;
+    
+    // Check if this handler should process this URI
+    if (!uri.startsWith("brex://expenses") || uri.includes("/card")) {
+      return { handled: false }; // Not handled by this handler (card expenses have their own handler)
+    }
+    
     logDebug(`Reading expenses resource: ${uri}`);
     
     // Get Brex client

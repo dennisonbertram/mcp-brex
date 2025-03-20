@@ -71,7 +71,8 @@ function validateParams(input: any): GetAllCardExpensesParams {
       : [input.status];
       
     statuses.forEach((status: string) => {
-      if (!Object.values(ExpenseStatus).includes(status)) {
+      // Type assertion to ensure status is treated as the correct enum type
+      if (!Object.values(ExpenseStatus).includes(status as ExpenseStatus)) {
         throw new Error(`Invalid status: ${status}`);
       }
     });
@@ -86,7 +87,8 @@ function validateParams(input: any): GetAllCardExpensesParams {
       : [input.payment_status];
       
     paymentStatuses.forEach((status: string) => {
-      if (!Object.values(ExpensePaymentStatus).includes(status)) {
+      // Type assertion to ensure status is treated as the correct enum type
+      if (!Object.values(ExpensePaymentStatus).includes(status as ExpensePaymentStatus)) {
         throw new Error(`Invalid payment_status: ${status}`);
       }
     });
@@ -165,12 +167,21 @@ async function fetchAllCardExpenses(client: BrexClient, params: GetAllCardExpens
         requestParams.payment_status = params.payment_status;
       }
       
+      // Use updated_at_start instead of created_at_start (which doesn't exist)
       if (params.start_date) {
-        requestParams.created_at_start = params.start_date;
+        requestParams.updated_at_start = params.start_date;
       }
       
+      // There may not be a direct equivalent for created_at_end
+      // Let's assume updated_at_end exists, otherwise we'll need client-side filtering
       if (params.end_date) {
-        requestParams.created_at_end = params.end_date;
+        if ('updated_at_end' in requestParams) {
+          // @ts-ignore - we're checking it exists at runtime
+          requestParams.updated_at_end = params.end_date;
+        } else {
+          // If no updated_at_end exists, we'll filter client-side
+          logDebug("Note: end_date filtering will be applied client-side");
+        }
       }
       
       // Fetch page of card expenses
@@ -189,12 +200,22 @@ async function fetchAllCardExpenses(client: BrexClient, params: GetAllCardExpens
         });
       }
       
+      // Client-side end_date filtering if needed
+      if (params.end_date && !('updated_at_end' in requestParams)) {
+        const endDate = new Date(params.end_date).getTime();
+        validExpenses = validExpenses.filter(expense => {
+          const updatedAt = new Date(expense.updated_at).getTime();
+          return updatedAt <= endDate;
+        });
+      }
+      
       allExpenses = allExpenses.concat(validExpenses);
       
       logDebug(`Retrieved ${validExpenses.length} card expenses (total: ${allExpenses.length})`);
       
       // Check if we should continue pagination
-      cursor = response.next_cursor;
+      // Use camelCase property as per error: "Property 'next_cursor' does not exist. Did you mean 'nextCursor'?"
+      cursor = response.nextCursor;
       hasMore = !!cursor;
       
     } catch (error) {

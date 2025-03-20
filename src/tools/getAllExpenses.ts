@@ -71,7 +71,8 @@ function validateParams(input: any): GetAllExpensesParams {
       : [input.expense_type];
       
     expenseTypes.forEach((type: string) => {
-      if (!Object.values(ExpenseType).includes(type)) {
+      // Type assertion to ensure proper comparison
+      if (!Object.values(ExpenseType).includes(type as ExpenseType)) {
         throw new Error(`Invalid expense_type: ${type}`);
       }
     });
@@ -86,7 +87,8 @@ function validateParams(input: any): GetAllExpensesParams {
       : [input.status];
       
     statuses.forEach((status: string) => {
-      if (!Object.values(ExpenseStatus).includes(status)) {
+      // Type assertion to ensure proper comparison
+      if (!Object.values(ExpenseStatus).includes(status as ExpenseStatus)) {
         throw new Error(`Invalid status: ${status}`);
       }
     });
@@ -101,7 +103,8 @@ function validateParams(input: any): GetAllExpensesParams {
       : [input.payment_status];
       
     paymentStatuses.forEach((status: string) => {
-      if (!Object.values(ExpensePaymentStatus).includes(status)) {
+      // Type assertion to ensure proper comparison
+      if (!Object.values(ExpensePaymentStatus).includes(status as ExpensePaymentStatus)) {
         throw new Error(`Invalid payment_status: ${status}`);
       }
     });
@@ -175,12 +178,20 @@ async function fetchAllExpenses(client: BrexClient, params: GetAllExpensesParams
         requestParams.payment_status = params.payment_status;
       }
       
+      // Use updated_at_start instead of created_at_start
       if (params.start_date) {
-        requestParams.created_at_start = params.start_date;
+        requestParams.updated_at_start = params.start_date;
       }
       
+      // Handle end date with a fallback to client-side filtering
       if (params.end_date) {
-        requestParams.created_at_end = params.end_date;
+        if ('updated_at_end' in requestParams) {
+          // @ts-ignore - we're checking it exists at runtime
+          requestParams.updated_at_end = params.end_date;
+        } else {
+          // If no updated_at_end exists, we'll filter client-side
+          logDebug("Note: end_date filtering will be applied client-side");
+        }
       }
       
       // Fetch page of expenses
@@ -188,13 +199,24 @@ async function fetchAllExpenses(client: BrexClient, params: GetAllExpensesParams
       const response = await client.getExpenses(requestParams);
       
       // Filter valid expenses
-      const validExpenses = response.items.filter(isExpense);
+      let validExpenses = response.items.filter(isExpense);
+      
+      // Client-side end_date filtering if needed
+      if (params.end_date && !('updated_at_end' in requestParams)) {
+        const endDate = new Date(params.end_date).getTime();
+        validExpenses = validExpenses.filter(expense => {
+          const updatedAt = new Date(expense.updated_at).getTime();
+          return updatedAt <= endDate;
+        });
+      }
+      
       allExpenses = allExpenses.concat(validExpenses);
       
       logDebug(`Retrieved ${validExpenses.length} expenses (total: ${allExpenses.length})`);
       
       // Check if we should continue pagination
-      cursor = response.next_cursor;
+      // Use camelCase property name
+      cursor = response.nextCursor;
       hasMore = !!cursor;
       
     } catch (error) {

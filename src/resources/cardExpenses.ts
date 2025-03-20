@@ -5,13 +5,15 @@
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { ReadResourceRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { ResourceTemplate } from "../models/resourceTemplate.js";
 import { logDebug, logError } from "../utils/logger.js";
 import { BrexClient } from "../services/brex/client.js";
 import { 
   ListExpensesParams, 
   ExpenseType, 
-  ExpenseStatus 
+  ExpenseStatus,
+  Expense
 } from "../services/brex/expenses-types.js";
 
 // Get Brex client
@@ -21,6 +23,17 @@ function getBrexClient(): BrexClient {
 
 // Define card expenses resource template
 const cardExpensesTemplate = new ResourceTemplate("brex://expenses/card{/id}");
+
+/**
+ * Checks if an object is a card expense (has expected properties)
+ * @param obj The object to check
+ * @returns true if the object appears to be a valid expense
+ */
+function isCardExpense(obj: any): obj is Expense {
+  return obj && 
+    typeof obj === 'object' && 
+    'id' in obj;
+}
 
 /**
  * Normalize card expense data to ensure required fields are present
@@ -60,7 +73,7 @@ function normalizeCardExpense(expense: any, id?: string): any {
  * @param server The MCP server instance
  */
 export function registerCardExpensesResource(server: Server): void {
-  server.registerCapability({
+  server.registerCapabilities({
     resources: {
       "brex://expenses/card{/id}": {
         description: "Brex card expenses",
@@ -69,8 +82,15 @@ export function registerCardExpensesResource(server: Server): void {
     }
   });
 
-  server.setReadResourceHandler(cardExpensesTemplate, async (request) => {
+  // Use the standard approach with setRequestHandler
+  server.setRequestHandler(ReadResourceRequestSchema, async (request, extra) => {
     const uri = request.params.uri;
+    
+    // Check if this handler should process this URI
+    if (!uri.startsWith("brex://expenses/card")) {
+      return { handled: false }; // Not handled by this handler
+    }
+    
     logDebug(`Reading card expenses resource: ${uri}`);
     
     // Get Brex client
@@ -79,81 +99,53 @@ export function registerCardExpensesResource(server: Server): void {
     // Parse parameters from URI
     const params = cardExpensesTemplate.parse(uri);
     
-    try {
-      if (!params.id) {
-        // List all card expenses
+    if (!params.id) {
+      // List all card expenses
+      try {
         logDebug("Fetching all card expenses from Brex API");
         const listParams: ListExpensesParams = {
           expense_type: [ExpenseType.CARD],
           limit: 50
         };
-        
-        try {
-          const expenses = await brexClient.getCardExpenses(listParams);
-          logDebug(`Successfully fetched ${expenses.items.length} card expenses`);
-          
-          // Normalize all items
-          const normalizedItems = expenses.items.map(item => 
-            normalizeCardExpense(item)
-          );
-          
-          return {
-            contents: [{
-              uri: uri,
-              mimeType: "application/json",
-              text: JSON.stringify(normalizedItems, null, 2)
-            }]
-          };
-        } catch (cardExpensesError) {
-          logError(`Error fetching card expenses data: ${cardExpensesError instanceof Error ? cardExpensesError.message : String(cardExpensesError)}`);
-          // Provide a fallback empty response
-          return {
-            contents: [{
-              uri: uri,
-              mimeType: "application/json",
-              text: JSON.stringify([], null, 2),
-            }]
-          };
-        }
-      } else {
-        // Get specific card expense
-        logDebug(`Fetching card expense ${params.id} from Brex API`);
-        
-        try {
-          const expense = await brexClient.getCardExpense(params.id, {
-            expand: ['merchant', 'location', 'department', 'receipts.download_uris'],
-            load_custom_fields: true
-          });
-          
-          const normalizedExpense = normalizeCardExpense(expense, params.id);
-          
-          return {
-            contents: [{
-              uri: uri,
-              mimeType: "application/json",
-              text: JSON.stringify(normalizedExpense, null, 2)
-            }]
-          };
-        } catch (cardExpenseError) {
-          logError(`Error fetching specific card expense data: ${cardExpenseError instanceof Error ? cardExpenseError.message : String(cardExpenseError)}`);
-          // Return a minimal valid expense object
-          return {
-            contents: [{
-              uri: uri,
-              mimeType: "application/json",
-              text: JSON.stringify({
-                id: params.id,
-                updated_at: new Date().toISOString(),
-                status: "UNKNOWN",
-                error: "Failed to fetch expense details"
-              }, null, 2)
-            }]
-          };
-        }
+        const cardExpenses = await brexClient.getCardExpenses(listParams);
+        logDebug(`Successfully fetched ${cardExpenses.items.length} card expenses`);
+        return {
+          contents: [{
+            uri: uri,
+            mimeType: "application/json",
+            text: JSON.stringify(cardExpenses.items, null, 2)
+          }]
+        };
+      } catch (error) {
+        logError(`Failed to fetch card expenses: ${error instanceof Error ? error.message : String(error)}`);
+        throw error;
       }
-    } catch (error) {
-      logError(`Failed to handle card expense request: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
+    } else {
+      // Get specific card expense
+      try {
+        logDebug(`Fetching card expense ${params.id} from Brex API`);
+        const cardExpense = await brexClient.getCardExpense(params.id, { 
+          expand: ['merchant', 'location', 'department', 'receipts.download_uris'],
+          load_custom_fields: true
+        });
+        
+        if (!isCardExpense(cardExpense)) {
+          logError(`Invalid card expense data received for card expense ID: ${params.id}`);
+          throw new Error('Invalid card expense data received');
+        }
+        
+        logDebug(`Successfully fetched card expense ${params.id}`);
+        return {
+          contents: [{
+            uri: uri,
+            mimeType: "application/json",
+            text: JSON.stringify(cardExpense, null, 2)
+          }]
+        };
+      } catch (error) {
+        logError(`Failed to fetch card expense ${params.id}: ${error instanceof Error ? error.message : String(error)}`);
+        throw error;
+      }
     }
   });
 } 

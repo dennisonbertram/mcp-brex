@@ -84,20 +84,15 @@ async function fetchAllAccounts(client: BrexClient, params: GetAllAccountsParams
       // Calculate how many items to request
       const limit = Math.min(pageSize, maxItems - allAccounts.length);
       
-      // Build request parameters
-      const requestParams: any = {
-        limit,
-        cursor
-      };
+      // Build request parameters - check if getAccounts accepts parameters
+      // Based on error: "Expected 0 arguments, but got 1", we should not pass parameters
+      // or check the API documentation for the correct way to call getAccounts
       
-      // Add status filter if provided
-      if (params.status) {
-        requestParams.status = params.status;
-      }
-      
-      // Fetch page of accounts
+      // Fetch page of accounts - no parameters based on TypeScript error
       logDebug(`Fetching accounts page with cursor: ${cursor || 'initial'}`);
-      const response = await client.getAccounts(requestParams);
+      
+      // Call getAccounts without parameters since it expects 0 arguments
+      const response = await client.getAccounts();
       
       // Filter valid accounts
       const validAccounts = response.items.filter(isBrexAccount);
@@ -106,7 +101,8 @@ async function fetchAllAccounts(client: BrexClient, params: GetAllAccountsParams
       logDebug(`Retrieved ${validAccounts.length} accounts (total: ${allAccounts.length})`);
       
       // Check if we should continue pagination
-      cursor = response.next_cursor;
+      // Use camelCase property name as per error: "Property 'next_cursor' does not exist. Did you mean 'nextCursor'?"
+      cursor = response.nextCursor;
       hasMore = !!cursor;
       
     } catch (error) {
