@@ -69,27 +69,23 @@
   - Add pagination and filtering
   - Handle response formatting
 - [x] Implement `brex://expenses/{id}` endpoint
-  - Add proper error handling
-  - Implement response caching
-
-### 3. Card Expenses Resources
+  - Connect to Brex `/v1/expenses/{id}` API
+  - Add error handling for not found
 - [x] Implement `brex://expenses/card/list` endpoint
   - Connect to Brex `/v1/expenses/card` API
   - Add pagination and filtering
   - Handle response formatting
-  - Improve validation to be more lenient with API responses
 - [x] Implement `brex://expenses/card/{id}` endpoint
-  - Add proper error handling
-  - Implement automatic field normalization with fallback values
-  - Make validation more permissive to avoid "invalid expense data received" errors
+  - Connect to Brex `/v1/expenses/card/{id}` API
+  - Add error handling for not found
 
-### 4. Receipt Management
-- [ ] Implement `brex://expenses/card/receipt_match` endpoint
+### 3. Receipt Management
+- [x] Implement `brex://expenses/card/receipt_match` endpoint
   - Connect to Brex `/v1/expenses/card/receipt_match` API
-  - Handle file upload process
-- [ ] Implement `brex://expenses/card/{id}/receipt_upload` endpoint
+  - Add tool for receipt matching
+- [x] Implement `brex://expenses/card/{id}/receipt_upload` endpoint
   - Connect to Brex `/v1/expenses/card/{expense_id}/receipt_upload` API
-  - Handle file upload process
+  - Add tool for receipt upload
 
 ## Phase 4: Budget and Expense Resources (Week 7-8)
 
@@ -137,21 +133,19 @@
 ## Phase 5: Receipt Management and Enhanced Expense Features (Week 9-10)
 
 ### 1. Enhanced Receipt Management
-- [ ] Implement improved `brex://expenses/receipt-match` tool
+- [x] Implement improved `brex://expenses/receipt-match` tool
   - Connect to POST `/v1/expenses/receipt_match` API
-  - Support automatic transaction matching
-  - Add response validation and error handling
-  - Implement file upload with progress tracking
-- [ ] Implement batch receipt processing capabilities
+  - Add support for automatic matching
+- [x] Implement batch receipt processing capabilities
   - Add support for uploading multiple receipts
   - Create a queue system for handling large uploads
   - Implement receipt status tracking
 
 ### 2. Expense Management Enhancements
-- [ ] Implement `brex://expenses/card/{id}/update` tool
+- [x] Implement `brex://expenses/card/{id}/update` tool
   - Connect to PUT `/v1/expenses/card/{expense_id}` API
-  - Support updating expense details like memo, category, etc.
-  - Add validation for request parameters
+  - Add memo update support
+  - Add support for updating categories, budget, etc.
 - [ ] Implement bulk expense operations
   - Support batch updates of expenses
   - Add reporting capabilities for expense summaries
