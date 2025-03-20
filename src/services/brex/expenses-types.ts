@@ -110,8 +110,10 @@ export enum Category {
 // Entity interfaces
 export interface Merchant {
   raw_descriptor: string;
-  mcc: string;
-  country: string;
+  mcc?: string;
+  country?: string;
+  id?: string;
+  name?: string;
 }
 
 export interface Location {
@@ -340,7 +342,9 @@ export const isMerchant = (obj: unknown): obj is Merchant => {
     typeof merchant === 'object' &&
     merchant !== null &&
     typeof merchant.raw_descriptor === 'string' &&
-    typeof merchant.mcc === 'string' &&
-    typeof merchant.country === 'string'
+    (merchant.mcc === undefined || typeof merchant.mcc === 'string') &&
+    (merchant.country === undefined || typeof merchant.country === 'string') &&
+    (merchant.id === undefined || typeof merchant.id === 'string') &&
+    (merchant.name === undefined || typeof merchant.name === 'string')
   );
 }

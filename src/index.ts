@@ -334,6 +334,29 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
               if (!expense.id) expense.id = "unknown-" + Math.random().toString(36).substring(2, 9);
               if (!expense.updated_at) expense.updated_at = new Date().toISOString();
               
+              // Format merchant information for better readability
+              if (expense.merchant) {
+                // If merchant exists but is incomplete, ensure it has essential fields
+                if (typeof expense.merchant === 'object') {
+                  // Preserve the raw_descriptor and ensure it's displayed prominently
+                  const merchantName = expense.merchant.raw_descriptor || 'Unknown Merchant';
+                  (expense as any).merchant_name = merchantName; // Use type assertion for added properties
+                  
+                  // Keep the original merchant object for detailed information
+                  if (!expense.merchant.raw_descriptor) {
+                    // Avoid modifying the merchant object directly with properties not in type
+                    (expense.merchant as any).raw_descriptor = 'Unknown'; 
+                  }
+                }
+              } else if (expense.merchant_id) {
+                // If we have just the merchant_id but no merchant object
+                expense.merchant = {
+                  raw_descriptor: 'Merchant ID: ' + expense.merchant_id,
+                  id: expense.merchant_id
+                };
+                (expense as any).merchant_name = 'Merchant ID: ' + expense.merchant_id;
+              }
+              
               return expense;
             });
             
@@ -373,14 +396,34 @@ server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
             // Add detailed logging for debugging
             logDebug(`Received card expense data: ${JSON.stringify(expense, null, 2)}`);
             
-            // Skip validation - accept all expense objects
-            // Instead, simply ensure required fields are present with fallbacks
-            
             // Ensure expense has required fields
             const normalizedExpense = { ...expense };
             if (!normalizedExpense.id) normalizedExpense.id = params.id;
             if (!normalizedExpense.updated_at) normalizedExpense.updated_at = new Date().toISOString();
             if (!normalizedExpense.status) normalizedExpense.status = ExpenseStatus.SUBMITTED; // Default status
+            
+            // Format merchant information for better readability
+            if (normalizedExpense.merchant) {
+              // If merchant exists but is incomplete, ensure it has essential fields
+              if (typeof normalizedExpense.merchant === 'object') {
+                // Preserve the raw_descriptor and display prominently
+                const merchantName = normalizedExpense.merchant.raw_descriptor || 'Unknown Merchant';
+                (normalizedExpense as any).merchant_name = merchantName; // Use type assertion for added properties
+                
+                // Keep the original merchant object for detailed information
+                if (!normalizedExpense.merchant.raw_descriptor) {
+                  // Avoid modifying the merchant object directly with properties not in type
+                  (normalizedExpense.merchant as any).raw_descriptor = 'Unknown'; 
+                }
+              }
+            } else if (normalizedExpense.merchant_id) {
+              // If we have just the merchant_id but no merchant object
+              normalizedExpense.merchant = {
+                raw_descriptor: 'Merchant ID: ' + normalizedExpense.merchant_id,
+                id: normalizedExpense.merchant_id
+              };
+              (normalizedExpense as any).merchant_name = 'Merchant ID: ' + normalizedExpense.merchant_id;
+            }
             
             // Always return the data, even if validation would fail
             return {

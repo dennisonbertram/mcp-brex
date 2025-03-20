@@ -206,7 +206,15 @@ export class BrexClient {
     try {
       logDebug('Fetching card expenses from Brex API');
       try {
-        const response = await this.client.get('/v1/expenses/card', { params });
+        // Add merchant expansion by default if not already specified
+        const expandedParams = { ...params };
+        if (!expandedParams.expand) {
+          expandedParams.expand = ['merchant'];
+        } else if (Array.isArray(expandedParams.expand) && !expandedParams.expand.includes('merchant')) {
+          expandedParams.expand.push('merchant');
+        }
+
+        const response = await this.client.get('/v1/expenses/card', { params: expandedParams });
         
         // Add error handling for malformed responses
         if (!response.data || !Array.isArray(response.data.items)) {

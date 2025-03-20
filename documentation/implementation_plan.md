@@ -57,28 +57,31 @@
 ## Phase 3: Expenses API Implementation (Week 5-6)
 
 ### 1. Expenses Core Setup
-- [ ] Add expense type definitions from Swagger schema
-- [ ] Create expense models and interfaces
-- [ ] Set up expense API endpoints in the client
-- [ ] Implement error handling specific to expenses
+- [x] Add expense type definitions from Swagger schema
+- [x] Create expense models and interfaces
+- [x] Set up expense API endpoints in the client
+- [x] Implement error handling specific to expenses
+- [x] Make expense validation more permissive to avoid invalid expense data errors
 
 ### 2. Expenses Resources
-- [ ] Implement `brex://expenses/list` endpoint
+- [x] Implement `brex://expenses/list` endpoint
   - Connect to Brex `/v1/expenses` API
   - Add pagination and filtering
   - Handle response formatting
-- [ ] Implement `brex://expenses/{id}` endpoint
+- [x] Implement `brex://expenses/{id}` endpoint
   - Add proper error handling
   - Implement response caching
 
 ### 3. Card Expenses Resources
-- [ ] Implement `brex://expenses/card/list` endpoint
+- [x] Implement `brex://expenses/card/list` endpoint
   - Connect to Brex `/v1/expenses/card` API
   - Add pagination and filtering
   - Handle response formatting
-- [ ] Implement `brex://expenses/card/{id}` endpoint
+  - Improve validation to be more lenient with API responses
+- [x] Implement `brex://expenses/card/{id}` endpoint
   - Add proper error handling
-  - Implement response caching
+  - Implement automatic field normalization with fallback values
+  - Make validation more permissive to avoid "invalid expense data received" errors
 
 ### 4. Receipt Management
 - [ ] Implement `brex://expenses/card/receipt_match` endpoint
@@ -88,53 +91,228 @@
   - Connect to Brex `/v1/expenses/card/{expense_id}/receipt_upload` API
   - Handle file upload process
 
-## Brex API v2 Migration Notes
-
-### API Changes Discovered
-- The Brex API has undergone significant changes in its endpoint structure
-- The v1 endpoints for accounts and transactions are no longer available
-- New endpoints use a more resource-specific structure (e.g., `/v2/accounts/cash`)
-
-### Implementation Updates
-- Updated client to use the v2 endpoints
-- Added user information endpoint through `/v2/users/me`
-- Implemented fallback mechanisms for when direct endpoints are not available
-- Added improved error handling for API-specific errors (401, 404)
-- Updated logging to include more detailed debug information
-
-### Type Updates
-- Account schema now matches the v2 API response format
-- Transaction data is now accessed through statements endpoint
-
 ## Phase 4: Budget and Expense Resources (Week 7-8)
 
 ### 1. Budget Resources
-- [ ] Implement `budgets://list` endpoint
+- [x] Implement `budgets://list` endpoint
   - Connect to Brex `/v2/budgets` API
   - Add pagination support
-- [ ] Implement `budgets://{id}` endpoint
+- [x] Implement `budgets://{id}` endpoint
   - Add proper error handling for non-existent budgets
   - Implement caching for frequently accessed budgets
 
-## Phase 5: Optimization and Documentation (Week 9-10)
+### 2. Spend Limits API (v1)
+- [ ] Implement `brex://spend-limits/list` endpoint
+  - Connect to Brex `/v1/budgets` API (targeting spend limits)
+  - Add pagination and filtering
+  - Handle response formatting
+- [ ] Implement `brex://spend-limits/{id}` endpoint
+  - Add proper error handling
+  - Add caching for frequently accessed spend limits
+- [ ] Implement `brex://spend-limits/create` tool
+  - Connect to POST `/v1/budgets` API
+  - Add idempotency key handling
+  - Validate request parameters
+- [ ] Implement `brex://spend-limits/{id}/update` tool
+  - Connect to PUT `/v1/budgets/{id}` API
+  - Add idempotency key handling
+  - Support partial updates of spend limit parameters
+
+### 3. Payment Resources - Vendor Management
+- [ ] Implement `brex://vendors/list` endpoint
+  - Connect to Brex `/v1/vendors` API
+  - Add pagination and search by vendor name
+  - Handle response formatting
+- [ ] Implement `brex://vendors/{id}` endpoint
+  - Add proper error handling for non-existent vendors
+  - Implement caching for frequently accessed vendor details
+- [ ] Implement `brex://vendors/create` tool
+  - Connect to POST `/v1/vendors` API
+  - Add idempotency key handling
+  - Validate request parameters
+- [ ] Implement `brex://vendors/{id}/update` tool
+  - Connect to PUT `/v1/vendors/{id}` API
+  - Support partial updates of vendor information
+
+## Phase 5: Receipt Management and Enhanced Expense Features (Week 9-10)
+
+### 1. Enhanced Receipt Management
+- [ ] Implement improved `brex://expenses/receipt-match` tool
+  - Connect to POST `/v1/expenses/receipt_match` API
+  - Support automatic transaction matching
+  - Add response validation and error handling
+  - Implement file upload with progress tracking
+- [ ] Implement batch receipt processing capabilities
+  - Add support for uploading multiple receipts
+  - Create a queue system for handling large uploads
+  - Implement receipt status tracking
+
+### 2. Expense Management Enhancements
+- [ ] Implement `brex://expenses/card/{id}/update` tool
+  - Connect to PUT `/v1/expenses/card/{expense_id}` API
+  - Support updating expense details like memo, category, etc.
+  - Add validation for request parameters
+- [ ] Implement bulk expense operations
+  - Support batch updates of expenses
+  - Add reporting capabilities for expense summaries
+  - Implement export functionality for expense data
+
+## Phase 6: Transaction and Account Resources (Week 13-14)
+
+### 1. Card Account Resources
+- [ ] Implement `brex://accounts/card/list` endpoint
+  - Connect to GET `/v2/accounts/card` API
+  - Retrieve and format all card accounts
+  - Add proper error handling and response validation
+- [ ] Implement `brex://accounts/card/primary/statements` endpoint
+  - Connect to GET `/v2/accounts/card/primary/statements` API
+  - Add pagination support with cursor and limit parameters
+  - Implement caching for frequently accessed statements
+  
+### 2. Cash Account Resources
+- [ ] Implement `brex://accounts/cash/list` endpoint
+  - Connect to GET `/v2/accounts/cash` API
+  - Add pagination support
+  - Handle response formatting
+- [ ] Implement `brex://accounts/cash/primary` endpoint
+  - Connect to GET `/v2/accounts/cash/primary` API
+  - Add proper error handling
+  - Implement caching for improved performance
+- [ ] Implement `brex://accounts/cash/{id}` endpoint
+  - Connect to GET `/v2/accounts/cash/{id}` API
+  - Add validation for ID parameter
+  - Ensure proper error handling for non-existent accounts
+- [ ] Implement `brex://accounts/cash/{id}/statements` endpoint
+  - Connect to GET `/v2/accounts/cash/{id}/statements` API
+  - Add pagination support with cursor and limit parameters
+  - Implement caching for frequently accessed statements
+  
+### 3. Transaction Resources
+- [ ] Implement `brex://transactions/card/primary` endpoint
+  - Connect to GET `/v2/transactions/card/primary` API
+  - Add support for all query parameters:
+    - cursor and limit for pagination
+    - user_ids for filtering by user
+    - posted_at_start for date filtering
+    - expand[] for expanding expense_id information
+  - Add proper response validation and error handling
+- [ ] Implement `brex://transactions/cash/{id}` endpoint
+  - Connect to GET `/v2/transactions/cash/{id}` API
+  - Add support for query parameters:
+    - cursor and limit for pagination
+    - posted_at_start for date filtering
+  - Add validation for ID parameter
+  - Ensure proper error handling
+
+## Phase 7: Optimization and Documentation (Week 15-16)
 
 ### 1. Performance Optimization
 - [ ] Implement intelligent caching strategy
+  - Add Redis caching for frequently accessed resources
+  - Implement cache invalidation strategy
+  - Add cache headers to responses
 - [ ] Add request batching where possible
-- [ ] Optimize payload sizes
+  - Group related expenses/transactions
+  - Implement parallel fetching
+- [ ] Optimize response payload size
+  - Add compression
+  - Implement field filtering
 
-### 2. Documentation and Testing
-- [x] Add API type documentation
-- [ ] Write integration tests
-- [ ] Create deployment documentation
-- [ ] Add monitoring setup instructions
+### 2. Documentation and Examples
+- [ ] Update API documentation
+  - Document all endpoints with examples
+  - Add authentication instructions
+  - Include error handling guide
+- [ ] Create usage examples
+  - Add example queries for each resource type
+  - Provide sample code for common operations
+  - Include Postman collection for testing
 
-### 3. Security Review
-- [x] Implement secure token handling
-- [x] Verify no sensitive data exposure
-- [x] Implement rate limiting
-- [x] Implement error handling
-- [x] Improve authentication error handling
+## MCP SDK Compatibility Analysis
+
+### 1. Resource Compatibility
+The following Resource-type endpoints align well with MCP SDK requirements:
+- `brex://expenses/list` (GET `/v1/expenses`)
+- `brex://expenses/card/list` (GET `/v1/expenses/card`)
+- `brex://accounts/card/list` (GET `/v2/accounts/card`)
+- `brex://accounts/cash/list` (GET `/v2/accounts/cash`)
+- `brex://transactions/card/primary` (GET `/v2/transactions/card/primary`)
+- `brex://transactions/cash/{id}` (GET `/v2/transactions/cash/{id}`)
+- `budgets://list` (GET `/v2/budgets`)
+
+These resources can be implemented as standard MCP Resources using ResourceTemplate:
+```typescript
+server.resource(
+  "expenses",
+  new ResourceTemplate("brex://expenses/list", { list: "Expenses List" }),
+  async (uri) => ({
+    contents: [{ uri: uri.href, text: "Expense data..." }]
+  })
+);
+```
+
+### 2. Tool Compatibility
+The following Tool-type endpoints are well-suited for the MCP SDK tool functionality:
+- `brex://expenses/card/receipt_match` (POST `/v1/expenses/card/receipt_match`)
+- `brex://expenses/card/{id}/receipt_upload` (POST `/v1/expenses/card/{expense_id}/receipt_upload`)
+- `brex://spend-limits/create` (POST `/v1/budgets`)
+- `brex://spend-limits/{id}/update` (PUT `/v1/budgets/{id}`)
+- `brex://vendors/create` (POST `/v1/vendors`)
+- `brex://vendors/{id}/update` (PUT `/v1/vendors/{id}`)
+
+These can be implemented as MCP Tools using zod schema validation:
+```typescript
+server.tool(
+  "upload-receipt",
+  { 
+    expense_id: z.string(),
+    receipt_file: z.string() 
+  },
+  async ({ expense_id, receipt_file }) => {
+    // Implementation
+    return { content: [{ type: "text", text: "Receipt uploaded" }] };
+  }
+);
+```
+
+### 3. Incompatibility Issues
+
+#### 3.1 Binary File Handling
+**Issue**: The MCP SDK doesn't have native support for uploading binary files in tools, which affects:
+- Receipt upload endpoints
+- Document attachment endpoints
+
+**Solution**: 
+- Implement a two-step process: first generate a signed URL, then provide instructions for direct upload
+- Consider Base64 encoding for small files as an alternative
+
+#### 3.2 Pagination Handling
+**Issue**: Brex uses cursor-based pagination, while MCP Resources don't have built-in pagination handling.
+
+**Solution**:
+- Implement custom pagination using query parameters in resource URIs
+- Create dedicated pagination resources (e.g., `brex://expenses/list?cursor=xyz`)
+- Document pagination approach for clients
+
+#### 3.3 Response Structure Normalization
+**Issue**: Brex API responses need to be transformed to match MCP's expected format.
+
+**Solution**:
+- Create transformation layers to normalize responses
+- Implement consistent error handling across all endpoints
+- Add response validation to ensure MCP compatibility
+
+### 4. Implementation Recommendations
+
+1. **Resource naming strategy**: Standardize on `brex://` prefix for Brex-specific resources and match endpoint naming to Brex API where possible.
+
+2. **Error handling**: Map Brex API errors (401, 403, 404) to appropriate MCP error responses.
+
+3. **Authentication flow**: Implement token refresh and validation consistent with both Brex and MCP requirements.
+
+4. **Documentation**: Create clear examples showing how each Brex endpoint maps to MCP primitives.
+
+5. **Testing**: Develop comprehensive tests ensuring compatibility between Brex responses and MCP expected formats.
 
 ## Resource Schema Implementation Details
 
@@ -249,4 +427,4 @@ For each resource endpoint:
 2. Add caching layer for accounts and transactions
 3. Write integration tests for existing functionality
 4. Implement expenses API integration
-5. Complete team resources implementation 
+5. Complete team resources implementation
