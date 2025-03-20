@@ -133,17 +133,3 @@ Move to `src/models/resourceTemplate.ts`:
 #### summarizeExpenses.ts
 - Implementation of summarize_expenses prompt
 
-## Testing Strategy
-
-1. Ensure all existing functionality works after refactoring
-2. Manual testing of each resource, tool, and prompt
-3. Consider adding automated tests in a future phase
-
-## Future Improvements
-
-After completing this refactoring:
-
-1. Add unit tests for individual components
-2. Implement better error handling and recovery
-3. Add more detailed documentation
-4. Consider using dependency injection for easier testing 
