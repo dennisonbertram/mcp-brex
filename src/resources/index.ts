@@ -9,6 +9,9 @@ import { ReadResourceRequestSchema, ListResourcesRequestSchema } from "@modelcon
 import { registerAccountsResource } from "./accounts.js";
 import { registerExpensesResource } from "./expenses.js";
 import { registerCardExpensesResource } from "./cardExpenses.js";
+import { registerBudgetsResource } from "./budgets.js";
+import { registerSpendLimitsResource } from "./spendLimits.js";
+import { registerBudgetProgramsResource } from "./budgetPrograms.js";
 import { logInfo, logDebug, logError } from "../utils/logger.js";
 
 /**
@@ -20,6 +23,9 @@ export function registerResources(server: Server): void {
   registerAccountsResource(server);
   registerExpensesResource(server);
   registerCardExpensesResource(server);
+  registerBudgetsResource(server);
+  registerSpendLimitsResource(server);
+  registerBudgetProgramsResource(server);
 
   // Register the list resources handler
   registerListResourcesHandler(server);
@@ -55,6 +61,24 @@ function registerListResourcesHandler(server: Server): void {
           mimeType: "application/json",
           name: "Brex Card Expenses",
           description: "List of all Brex card expenses"
+        },
+        {
+          uri: "brex://budgets",
+          mimeType: "application/json",
+          name: "Brex Budgets",
+          description: "List of all Brex budgets"
+        },
+        {
+          uri: "brex://spend_limits",
+          mimeType: "application/json",
+          name: "Brex Spend Limits",
+          description: "List of all Brex spend limits"
+        },
+        {
+          uri: "brex://budget_programs",
+          mimeType: "application/json",
+          name: "Brex Budget Programs",
+          description: "List of all Brex budget programs"
         }
       ];
       
@@ -86,6 +110,24 @@ function registerListResourcesHandler(server: Server): void {
             mimeType: "application/json",
             name: "Brex Card Expenses",
             description: "List of all Brex card expenses"
+          },
+          {
+            uri: "brex://budgets",
+            mimeType: "application/json",
+            name: "Brex Budgets",
+            description: "List of all Brex budgets"
+          },
+          {
+            uri: "brex://spend_limits",
+            mimeType: "application/json",
+            name: "Brex Spend Limits",
+            description: "List of all Brex spend limits"
+          },
+          {
+            uri: "brex://budget_programs",
+            mimeType: "application/json",
+            name: "Brex Budget Programs",
+            description: "List of all Brex budget programs"
           }
         ]
       };

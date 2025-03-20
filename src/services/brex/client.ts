@@ -14,6 +14,7 @@
  * - Fetch accounts and transactions
  * - Fetch and manage expenses
  * - Upload and manage receipts
+ * - Manage budgets and spend limits
  * - Handle authentication and errors
  * - Implement rate limiting
  */
@@ -33,6 +34,23 @@ import {
   CreateAsyncFileUploadResponse,
   ExpenseStatus
 } from './expenses-types.js';
+import {
+  Budget,
+  BudgetListParams,
+  BudgetsResponse,
+  CreateBudgetRequest,
+  UpdateBudgetRequest,
+  SpendLimit,
+  SpendLimitListParams,
+  SpendLimitsResponse,
+  CreateSpendLimitRequest,
+  UpdateSpendLimitRequest,
+  BudgetProgram,
+  BudgetProgramListParams,
+  BudgetProgramsResponse,
+  CreateBudgetProgramRequest,
+  UpdateBudgetProgramRequest
+} from '../../models/budget.js';
 
 export class BrexClient {
   private client: AxiosInstance;
@@ -364,6 +382,240 @@ export class BrexClient {
     } catch (error) {
       logError('Failed to upload file to S3', { error });
       throw new Error('Failed to upload file: ' + (error instanceof Error ? error.message : String(error)));
+    }
+  }
+
+  // Budget API methods
+  
+  /**
+   * Get a list of budgets
+   * @param params Optional parameters for filtering and pagination
+   * @returns Paginated list of budgets
+   */
+  async getBudgets(params?: BudgetListParams): Promise<BudgetsResponse> {
+    try {
+      logDebug('Fetching budgets from Brex API', { params });
+      return await this.get('/v2/budgets', params);
+    } catch (error) {
+      logError(`Error fetching budgets: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a single budget by ID
+   * @param budgetId Budget ID
+   * @returns Budget object
+   */
+  async getBudget(budgetId: string): Promise<Budget> {
+    try {
+      logDebug(`Fetching budget ${budgetId} from Brex API`);
+      return await this.get(`/v2/budgets/${budgetId}`);
+    } catch (error) {
+      logError(`Error fetching budget ${budgetId}: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new budget
+   * @param data Budget creation request data
+   * @returns Created budget
+   */
+  async createBudget(data: CreateBudgetRequest): Promise<Budget> {
+    try {
+      logDebug('Creating new budget in Brex API');
+      return await this.post('/v2/budgets', data);
+    } catch (error) {
+      logError(`Error creating budget: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Update an existing budget
+   * @param budgetId Budget ID
+   * @param data Budget update request data
+   * @returns Updated budget
+   */
+  async updateBudget(budgetId: string, data: UpdateBudgetRequest): Promise<Budget> {
+    try {
+      logDebug(`Updating budget ${budgetId} in Brex API`);
+      return await this.put(`/v2/budgets/${budgetId}`, data);
+    } catch (error) {
+      logError(`Error updating budget ${budgetId}: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Archive a budget
+   * @param budgetId Budget ID
+   * @returns Archived budget
+   */
+  async archiveBudget(budgetId: string): Promise<Budget> {
+    try {
+      logDebug(`Archiving budget ${budgetId} in Brex API`);
+      return await this.post(`/v2/budgets/${budgetId}/archive`, {});
+    } catch (error) {
+      logError(`Error archiving budget ${budgetId}: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+
+  // Spend Limits API methods
+  
+  /**
+   * Get a list of spend limits
+   * @param params Optional parameters for filtering and pagination
+   * @returns Paginated list of spend limits
+   */
+  async getSpendLimits(params?: SpendLimitListParams): Promise<SpendLimitsResponse> {
+    try {
+      logDebug('Fetching spend limits from Brex API', { params });
+      return await this.get('/v2/spend_limits', params);
+    } catch (error) {
+      logError(`Error fetching spend limits: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a single spend limit by ID
+   * @param spendLimitId Spend limit ID
+   * @returns Spend limit object
+   */
+  async getSpendLimit(spendLimitId: string): Promise<SpendLimit> {
+    try {
+      logDebug(`Fetching spend limit ${spendLimitId} from Brex API`);
+      return await this.get(`/v2/spend_limits/${spendLimitId}`);
+    } catch (error) {
+      logError(`Error fetching spend limit ${spendLimitId}: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new spend limit
+   * @param data Spend limit creation request data
+   * @returns Created spend limit
+   */
+  async createSpendLimit(data: CreateSpendLimitRequest): Promise<SpendLimit> {
+    try {
+      logDebug('Creating new spend limit in Brex API');
+      return await this.post('/v2/spend_limits', data);
+    } catch (error) {
+      logError(`Error creating spend limit: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Update an existing spend limit
+   * @param spendLimitId Spend limit ID
+   * @param data Spend limit update request data
+   * @returns Updated spend limit
+   */
+  async updateSpendLimit(spendLimitId: string, data: UpdateSpendLimitRequest): Promise<SpendLimit> {
+    try {
+      logDebug(`Updating spend limit ${spendLimitId} in Brex API`);
+      return await this.put(`/v2/spend_limits/${spendLimitId}`, data);
+    } catch (error) {
+      logError(`Error updating spend limit ${spendLimitId}: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Archive a spend limit
+   * @param spendLimitId Spend limit ID
+   * @returns Archived spend limit
+   */
+  async archiveSpendLimit(spendLimitId: string): Promise<SpendLimit> {
+    try {
+      logDebug(`Archiving spend limit ${spendLimitId} in Brex API`);
+      return await this.post(`/v2/spend_limits/${spendLimitId}/archive`, {});
+    } catch (error) {
+      logError(`Error archiving spend limit ${spendLimitId}: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+
+  // Budget Programs API methods
+  
+  /**
+   * Get a list of budget programs
+   * @param params Optional parameters for filtering and pagination
+   * @returns Paginated list of budget programs
+   */
+  async getBudgetPrograms(params?: BudgetProgramListParams): Promise<BudgetProgramsResponse> {
+    try {
+      logDebug('Fetching budget programs from Brex API', { params });
+      return await this.get('/v1/budget_programs', params);
+    } catch (error) {
+      logError(`Error fetching budget programs: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Get a single budget program by ID
+   * @param programId Budget program ID
+   * @returns Budget program object
+   */
+  async getBudgetProgram(programId: string): Promise<BudgetProgram> {
+    try {
+      logDebug(`Fetching budget program ${programId} from Brex API`);
+      return await this.get(`/v1/budget_programs/${programId}`);
+    } catch (error) {
+      logError(`Error fetching budget program ${programId}: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Create a new budget program
+   * @param data Budget program creation request data
+   * @returns Created budget program
+   */
+  async createBudgetProgram(data: CreateBudgetProgramRequest): Promise<BudgetProgram> {
+    try {
+      logDebug('Creating new budget program in Brex API');
+      return await this.post('/v1/budget_programs', data);
+    } catch (error) {
+      logError(`Error creating budget program: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Update an existing budget program
+   * @param programId Budget program ID
+   * @param data Budget program update request data
+   * @returns Updated budget program
+   */
+  async updateBudgetProgram(programId: string, data: UpdateBudgetProgramRequest): Promise<BudgetProgram> {
+    try {
+      logDebug(`Updating budget program ${programId} in Brex API`);
+      return await this.put(`/v1/budget_programs/${programId}`, data);
+    } catch (error) {
+      logError(`Error updating budget program ${programId}: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a budget program
+   * @param programId Budget program ID
+   * @returns Void
+   */
+  async deleteBudgetProgram(programId: string): Promise<void> {
+    try {
+      logDebug(`Deleting budget program ${programId} from Brex API`);
+      await this.client.delete(`/v1/budget_programs/${programId}`);
+    } catch (error) {
+      logError(`Error deleting budget program ${programId}: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
     }
   }
 
