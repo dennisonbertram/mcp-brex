@@ -70,7 +70,13 @@ npm install
 
 3. Create a `.env` file with your Brex API token:
 ```
-BREX_API_TOKEN=your_token_here
+BREX_API_KEY=your_token_here
+BREX_API_URL=https://platform.brexapis.com
+PORT=3000
+NODE_ENV=development
+RATE_LIMIT_REQUESTS=1000
+RATE_LIMIT_WINDOW_MS=60000
+LOG_LEVEL=info
 ```
 
 4. Build the server:
@@ -87,7 +93,7 @@ On Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
 1. Open Claude for Desktop and go to settings by clicking on the Claude menu and selecting "Settings..."
 2. Click on "Developer" in the left sidebar, then click "Edit Config"
-3. Update the configuration file with the Brex MCP server settings, including your API key:
+3. Update the configuration file with the Brex MCP server settings:
 
 ```json
 {
@@ -95,9 +101,17 @@ On Windows: `%APPDATA%\Claude\claude_desktop_config.json`
     "brex-server": {
       "command": "node",
       "args": [
-        "/path/to/brex-mcp-server/build/index.js",
-        "--brex-api-token=your_brex_api_token_here"
-      ]
+        "/path/to/brex-mcp-server/build/index.js"
+      ],
+      "env": {
+        "BREX_API_KEY": "your_brex_api_key_here",
+        "BREX_API_URL": "https://platform.brexapis.com",
+        "PORT": "3000",
+        "NODE_ENV": "development",
+        "RATE_LIMIT_REQUESTS": "1000",
+        "RATE_LIMIT_WINDOW_MS": "60000",
+        "LOG_LEVEL": "info"
+      }
     }
   }
 }
@@ -105,13 +119,13 @@ On Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
 Make sure to:
 - Replace `/path/to/brex-mcp-server` with the actual path where you installed the server
-- Replace `your_brex_api_token_here` with your actual Brex API token
+- Replace `your_brex_api_key_here` with your actual Brex API key
 - Use absolute paths for the server location
+
+Only the `BREX_API_KEY` and `BREX_API_URL` values are required; the other environment variables have sensible defaults but can be customized if needed.
 
 4. Save the file and restart Claude for Desktop
 5. Verify the server is working by checking for the hammer icon in the bottom right corner of the input box
-
-> **Note**: Passing the API token via configuration is more convenient when using Claude Desktop, but you can also continue to use the `.env` file method described above.
 
 ## Development
 
