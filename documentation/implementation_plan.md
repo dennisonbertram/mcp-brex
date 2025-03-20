@@ -90,45 +90,73 @@
 ## Phase 4: Budget and Expense Resources (Week 7-8)
 
 ### 1. Budget Resources
-- [x] Implement `budgets://list` endpoint
+- [ ] Implement `brex://budgets` resource handler
   - Connect to Brex `/v2/budgets` API
   - Add pagination support
-- [x] Implement `budgets://{id}` endpoint
-  - Add proper error handling for non-existent budgets
-  - Implement caching for frequently accessed budgets
+  - Support filtering by cursor and limit
+- [ ] Implement `brex://budgets/{id}` resource handler
+  - Connect to GET `/v2/budgets/{id}` API
+  - Add error handling for not found
 
-### 2. Spend Limits API (v1)
-- [ ] Implement `brex://spend-limits/list` endpoint
-  - Connect to Brex `/v1/budgets` API (targeting spend limits)
-  - Add pagination and filtering
+### 2. Spend Limits Resources
+- [ ] Implement `brex://spend_limits` resource handler
+  - Connect to Brex `/v2/spend_limits` API
+  - Add pagination and filtering support
   - Handle response formatting
-- [ ] Implement `brex://spend-limits/{id}` endpoint
+- [ ] Implement `brex://spend_limits/{id}` resource handler
+  - Connect to GET `/v2/spend_limits/{id}` API
   - Add proper error handling
-  - Add caching for frequently accessed spend limits
-- [ ] Implement `brex://spend-limits/create` tool
-  - Connect to POST `/v1/budgets` API
-  - Add idempotency key handling
-  - Validate request parameters
-- [ ] Implement `brex://spend-limits/{id}/update` tool
-  - Connect to PUT `/v1/budgets/{id}` API
-  - Add idempotency key handling
-  - Support partial updates of spend limit parameters
 
-### 3. Payment Resources - Vendor Management
-- [ ] Implement `brex://vendors/list` endpoint
-  - Connect to Brex `/v1/vendors` API
-  - Add pagination and search by vendor name
+### 3. Budget Programs Resources
+- [ ] Implement `brex://budget_programs` resource handler
+  - Connect to Brex `/v1/budget_programs` API
+  - Add pagination support
+  - Support filtering by cursor and limit
+- [ ] Implement `brex://budget_programs/{id}` resource handler
+  - Connect to GET `/v1/budget_programs/{id}` API
+  - Add error handling for not found
+
+### 4. Budget Management Tools
+- [ ] Implement `create_budget` tool
+  - Connect to POST `/v2/budgets` API
+  - Add validation for required fields
   - Handle response formatting
-- [ ] Implement `brex://vendors/{id}` endpoint
-  - Add proper error handling for non-existent vendors
-  - Implement caching for frequently accessed vendor details
-- [ ] Implement `brex://vendors/create` tool
-  - Connect to POST `/v1/vendors` API
-  - Add idempotency key handling
-  - Validate request parameters
-- [ ] Implement `brex://vendors/{id}/update` tool
-  - Connect to PUT `/v1/vendors/{id}` API
-  - Support partial updates of vendor information
+- [ ] Implement `update_budget` tool
+  - Connect to PUT `/v2/budgets/{id}` API
+  - Add validation for required fields
+  - Handle error cases
+- [ ] Implement `archive_budget` tool
+  - Connect to POST `/v2/budgets/{id}/archive` API
+  - Add confirmation mechanism
+  - Handle error cases
+
+### 5. Spend Limit Tools
+- [ ] Implement `create_spend_limit` tool
+  - Connect to POST `/v2/spend_limits` API
+  - Add validation for required fields
+  - Handle authorization settings
+- [ ] Implement `update_spend_limit` tool
+  - Connect to PUT `/v2/spend_limits/{id}` API
+  - Support partial updates
+  - Handle error cases
+- [ ] Implement `archive_spend_limit` tool
+  - Connect to POST `/v2/spend_limits/{id}/archive` API
+  - Add confirmation mechanism
+  - Handle error cases
+
+### 6. Budget Program Tools
+- [ ] Implement `create_budget_program` tool
+  - Connect to POST `/v1/budget_programs` API
+  - Support employee filtering and budget blueprints
+  - Handle response formatting
+- [ ] Implement `update_budget_program` tool
+  - Connect to PUT `/v1/budget_programs/{id}` API
+  - Support partial updates including blueprint management
+  - Handle error cases
+- [ ] Implement `delete_budget_program` tool
+  - Connect to DELETE `/v1/budget_programs/{id}` API
+  - Add confirmation mechanism
+  - Handle error cases
 
 ## Phase 5: Receipt Management and Enhanced Expense Features (Week 9-10)
 
@@ -422,6 +450,97 @@ For each resource endpoint:
 3. Write integration tests for existing functionality
 4. Implement expenses API integration
 5. Complete team resources implementation
+6. Implement budget and spend limits resources and tools (see detailed plan in `documentation/budget_implementation_plan.md`)
+
+## Brex Budget API Integration Plan
+
+For a detailed implementation plan for the Brex Budget API, please refer to the dedicated document at `documentation/budget_implementation_plan.md`, which outlines:
+
+- Resource URI structure for budget endpoints
+- Implementation phases for budget resources and tools
+- Technical implementation details including code patterns
+- Data models for budgets, spend limits, and budget programs
+- Error handling and pagination strategies
+
+The Budget API endpoints that will be implemented include:
+
+### Budget Endpoints (v2)
+- **GET /v2/budgets**
+  - **MCP Resource URI**: `brex://budgets`
+  - **Description**: Retrieves all budgets with pagination
+  - **Implementation Priority**: High
+
+- **GET /v2/budgets/{id}**
+  - **MCP Resource URI**: `brex://budgets/{id}`
+  - **Description**: Retrieves a specific budget by ID
+  - **Implementation Priority**: High
+
+- **POST /v2/budgets**
+  - **MCP Tool Name**: `create_budget`
+  - **Description**: Creates a new budget
+  - **Implementation Priority**: Medium
+
+- **PUT /v2/budgets/{id}**
+  - **MCP Tool Name**: `update_budget`
+  - **Description**: Updates an existing budget
+  - **Implementation Priority**: Medium
+
+- **POST /v2/budgets/{id}/archive**
+  - **MCP Tool Name**: `archive_budget`
+  - **Description**: Archives an existing budget
+  - **Implementation Priority**: Low
+
+### Spend Limits Endpoints (v2)
+- **GET /v2/spend_limits**
+  - **MCP Resource URI**: `brex://spend_limits`
+  - **Description**: Retrieves all spend limits with pagination
+  - **Implementation Priority**: High
+
+- **GET /v2/spend_limits/{id}**
+  - **MCP Resource URI**: `brex://spend_limits/{id}`
+  - **Description**: Retrieves a specific spend limit by ID
+  - **Implementation Priority**: High
+
+- **POST /v2/spend_limits**
+  - **MCP Tool Name**: `create_spend_limit`
+  - **Description**: Creates a new spend limit
+  - **Implementation Priority**: Medium
+
+- **PUT /v2/spend_limits/{id}**
+  - **MCP Tool Name**: `update_spend_limit`
+  - **Description**: Updates an existing spend limit
+  - **Implementation Priority**: Medium
+
+- **POST /v2/spend_limits/{id}/archive**
+  - **MCP Tool Name**: `archive_spend_limit`
+  - **Description**: Archives an existing spend limit
+  - **Implementation Priority**: Low
+
+### Budget Programs Endpoints (v1)
+- **GET /v1/budget_programs**
+  - **MCP Resource URI**: `brex://budget_programs`
+  - **Description**: Retrieves all budget programs with pagination
+  - **Implementation Priority**: Medium
+
+- **GET /v1/budget_programs/{id}**
+  - **MCP Resource URI**: `brex://budget_programs/{id}`
+  - **Description**: Retrieves a specific budget program by ID
+  - **Implementation Priority**: Medium
+
+- **POST /v1/budget_programs**
+  - **MCP Tool Name**: `create_budget_program`
+  - **Description**: Creates a new budget program
+  - **Implementation Priority**: Low
+
+- **PUT /v1/budget_programs/{id}**
+  - **MCP Tool Name**: `update_budget_program`
+  - **Description**: Updates an existing budget program
+  - **Implementation Priority**: Low
+
+- **DELETE /v1/budget_programs/{id}**
+  - **MCP Tool Name**: `delete_budget_program`
+  - **Description**: Deletes an existing budget program
+  - **Implementation Priority**: Low
 
 ## Brex Expenses API Integration Plan
 
