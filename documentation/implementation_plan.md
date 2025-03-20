@@ -117,46 +117,46 @@
   - Add error handling for not found
 
 ### 4. Budget Management Tools
-- [ ] Implement `create_budget` tool
-  - Connect to POST `/v2/budgets` API
-  - Add validation for required fields
-  - Handle response formatting
-- [ ] Implement `update_budget` tool
-  - Connect to PUT `/v2/budgets/{id}` API
-  - Add validation for required fields
-  - Handle error cases
-- [ ] Implement `archive_budget` tool
-  - Connect to POST `/v2/budgets/{id}/archive` API
-  - Add confirmation mechanism
-  - Handle error cases
+- [ ] ~~Implement `create_budget` tool~~ (Not implemented for security reasons)
+  - ~~Connect to POST `/v2/budgets` API~~
+  - ~~Add validation for required fields~~
+  - ~~Handle response formatting~~
+- [ ] ~~Implement `update_budget` tool~~ (Not implemented for security reasons)
+  - ~~Connect to PUT `/v2/budgets/{id}` API~~
+  - ~~Add validation for required fields~~
+  - ~~Handle error cases~~
+- [ ] ~~Implement `archive_budget` tool~~ (Not implemented for security reasons)
+  - ~~Connect to POST `/v2/budgets/{id}/archive` API~~
+  - ~~Add confirmation mechanism~~
+  - ~~Handle error cases~~
 
 ### 5. Spend Limit Tools
-- [ ] Implement `create_spend_limit` tool
-  - Connect to POST `/v2/spend_limits` API
-  - Add validation for required fields
-  - Handle authorization settings
-- [ ] Implement `update_spend_limit` tool
-  - Connect to PUT `/v2/spend_limits/{id}` API
-  - Support partial updates
-  - Handle error cases
-- [ ] Implement `archive_spend_limit` tool
-  - Connect to POST `/v2/spend_limits/{id}/archive` API
-  - Add confirmation mechanism
-  - Handle error cases
+- [ ] ~~Implement `create_spend_limit` tool~~ (Not implemented for security reasons)
+  - ~~Connect to POST `/v2/spend_limits` API~~
+  - ~~Add validation for required fields~~
+  - ~~Handle authorization settings~~
+- [ ] ~~Implement `update_spend_limit` tool~~ (Not implemented for security reasons)
+  - ~~Connect to PUT `/v2/spend_limits/{id}` API~~
+  - ~~Support partial updates~~
+  - ~~Handle error cases~~
+- [ ] ~~Implement `archive_spend_limit` tool~~ (Not implemented for security reasons)
+  - ~~Connect to POST `/v2/spend_limits/{id}/archive` API~~
+  - ~~Add confirmation mechanism~~
+  - ~~Handle error cases~~
 
 ### 6. Budget Program Tools
-- [ ] Implement `create_budget_program` tool
-  - Connect to POST `/v1/budget_programs` API
-  - Support employee filtering and budget blueprints
-  - Handle response formatting
-- [ ] Implement `update_budget_program` tool
-  - Connect to PUT `/v1/budget_programs/{id}` API
-  - Support partial updates including blueprint management
-  - Handle error cases
-- [ ] Implement `delete_budget_program` tool
-  - Connect to DELETE `/v1/budget_programs/{id}` API
-  - Add confirmation mechanism
-  - Handle error cases
+- [ ] ~~Implement `create_budget_program` tool~~ (Not implemented for security reasons)
+  - ~~Connect to POST `/v1/budget_programs` API~~
+  - ~~Support employee filtering and budget blueprints~~
+  - ~~Handle response formatting~~
+- [ ] ~~Implement `update_budget_program` tool~~ (Not implemented for security reasons)
+  - ~~Connect to PUT `/v1/budget_programs/{id}` API~~
+  - ~~Support partial updates including blueprint management~~
+  - ~~Handle error cases~~
+- [ ] ~~Implement `delete_budget_program` tool~~ (Not implemented for security reasons)
+  - ~~Connect to DELETE `/v1/budget_programs/{id}` API~~
+  - ~~Add confirmation mechanism~~
+  - ~~Handle error cases~~
 
 ## Phase 5: Receipt Management and Enhanced Expense Features (Week 9-10)
 
@@ -433,6 +433,9 @@ For each resource endpoint:
 - [x] Test authentication edge cases
 - [ ] Verify proper HTTPS usage
 - [x] Check logging for sensitive data
+- [x] Restrict implementation to read-only operations for sensitive resources (budgets, spend limits, budget programs)
+- [ ] Implement additional security review process for any future create/update/delete operations
+- [ ] Document security considerations for each endpoint
 
 ## Deployment Checklist
 
@@ -450,7 +453,42 @@ For each resource endpoint:
 3. Write integration tests for existing functionality
 4. Implement expenses API integration
 5. Complete team resources implementation
-6. Implement budget and spend limits resources and tools (see detailed plan in `documentation/budget_implementation_plan.md`)
+
+## Budget API Integration Next Steps
+
+For the Budget API integration, the following steps are planned:
+
+1. **Budget Resource Enhancements**
+   - Add filtering capabilities to budget resources
+   - Improve error handling and validation
+   - Add support for advanced query parameters
+   - Implement caching for frequently accessed budget data
+
+2. **Spend Limit Resource Enhancements**
+   - Add merchant category filtering support
+   - Implement additional query parameters for filtering
+   - Improve response formatting and validation
+   - Add caching for better performance
+
+3. **Budget Programs Resource Enhancements**
+   - Add employee filter support in queries
+   - Improve error handling for complex program structures
+   - Add validation for program data
+   - Implement performance optimizations
+
+4. **Documentation and Testing**
+   - Create comprehensive documentation for budget resources
+   - Add examples for common budget operations
+   - Implement thorough unit and integration tests
+   - Create usage guides for specific scenarios
+
+> **Note on Create/Update/Delete Operations**: For security reasons, we have decided not to implement the following tools at this time:
+> - `create_budget`, `update_budget`, `archive_budget` tools
+> - `create_spend_limit`, `update_spend_limit`, `archive_spend_limit` tools
+> - `create_budget_program`, `update_budget_program`, `delete_budget_program` tools
+>
+> These operations could have significant financial implications and require additional security reviews and safeguards before implementation.
+> Read-only operations (resource fetching) will continue to be supported and enhanced.
 
 ## Brex Budget API Integration Plan
 
@@ -479,16 +517,19 @@ The Budget API endpoints that will be implemented include:
   - **MCP Tool Name**: `create_budget`
   - **Description**: Creates a new budget
   - **Implementation Priority**: Medium
+  - **Note**: Not implemented for security reasons
 
 - **PUT /v2/budgets/{id}**
   - **MCP Tool Name**: `update_budget`
   - **Description**: Updates an existing budget
   - **Implementation Priority**: Medium
+  - **Note**: Not implemented for security reasons
 
 - **POST /v2/budgets/{id}/archive**
   - **MCP Tool Name**: `archive_budget`
   - **Description**: Archives an existing budget
   - **Implementation Priority**: Low
+  - **Note**: Not implemented for security reasons
 
 ### Spend Limits Endpoints (v2)
 - **GET /v2/spend_limits**
@@ -505,16 +546,19 @@ The Budget API endpoints that will be implemented include:
   - **MCP Tool Name**: `create_spend_limit`
   - **Description**: Creates a new spend limit
   - **Implementation Priority**: Medium
+  - **Note**: Not implemented for security reasons
 
 - **PUT /v2/spend_limits/{id}**
   - **MCP Tool Name**: `update_spend_limit`
   - **Description**: Updates an existing spend limit
   - **Implementation Priority**: Medium
+  - **Note**: Not implemented for security reasons
 
 - **POST /v2/spend_limits/{id}/archive**
   - **MCP Tool Name**: `archive_spend_limit`
   - **Description**: Archives an existing spend limit
   - **Implementation Priority**: Low
+  - **Note**: Not implemented for security reasons
 
 ### Budget Programs Endpoints (v1)
 - **GET /v1/budget_programs**
@@ -531,16 +575,19 @@ The Budget API endpoints that will be implemented include:
   - **MCP Tool Name**: `create_budget_program`
   - **Description**: Creates a new budget program
   - **Implementation Priority**: Low
+  - **Note**: Not implemented for security reasons
 
 - **PUT /v1/budget_programs/{id}**
   - **MCP Tool Name**: `update_budget_program`
   - **Description**: Updates an existing budget program
   - **Implementation Priority**: Low
+  - **Note**: Not implemented for security reasons
 
 - **DELETE /v1/budget_programs/{id}**
   - **MCP Tool Name**: `delete_budget_program`
   - **Description**: Deletes an existing budget program
   - **Implementation Priority**: Low
+  - **Note**: Not implemented for security reasons
 
 ## Brex Expenses API Integration Plan
 
