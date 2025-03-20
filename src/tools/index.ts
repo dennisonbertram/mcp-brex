@@ -10,6 +10,8 @@ import { registerGetTransactions } from "./getTransactions.js";
 import { registerGetExpenses } from "./getExpenses.js";
 import { registerGetAccountDetails } from "./getAccountDetails.js";
 import { registerUploadReceipt } from "./uploadReceipt.js";
+import { registerMatchReceipt } from "./matchReceipt.js";
+import { registerUpdateExpense } from "./updateExpense.js";
 import { registerGetAllAccounts } from "./getAllAccounts.js";
 import { registerGetAllExpenses } from "./getAllExpenses.js";
 import { registerGetAllCardExpenses } from "./getAllCardExpenses.js";
@@ -29,6 +31,8 @@ export function registerTools(server: Server): void {
   registerGetExpenses(server);
   registerGetAccountDetails(server);
   registerUploadReceipt(server);
+  registerMatchReceipt(server);
+  registerUpdateExpense(server);
   
   // Register pagination-aware tool handlers
   registerGetAllAccounts(server);
@@ -130,6 +134,79 @@ function registerListToolsHandler(server: Server): void {
               }
             },
             required: ["receipt_data", "receipt_name", "content_type"]
+          }
+        },
+        {
+          name: "match_receipt",
+          description: "Create a pre-signed URL for uploading a receipt that will be automatically matched with existing expenses",
+          inputSchema: {
+            type: "object",
+            properties: {
+              receipt_name: {
+                type: "string",
+                description: "Name of the receipt file (e.g., 'receipt.jpg')"
+              },
+              receipt_type: {
+                type: "string",
+                description: "Type of the receipt (optional)"
+              },
+              notify_email: {
+                type: "string",
+                description: "Email address to notify after matching (optional)"
+              }
+            },
+            required: ["receipt_name"]
+          }
+        },
+        {
+          name: "update_expense",
+          description: "Update an existing card expense",
+          inputSchema: {
+            type: "object",
+            properties: {
+              expense_id: {
+                type: "string",
+                description: "ID of the expense to update"
+              },
+              memo: {
+                type: "string",
+                description: "Memo text to attach to the expense (optional)"
+              },
+              category: {
+                type: "string",
+                description: "Category of the expense (optional)"
+              },
+              budget_id: {
+                type: "string",
+                description: "ID of the budget to associate with the expense (optional)"
+              },
+              department_id: {
+                type: "string",
+                description: "ID of the department to associate with the expense (optional)"
+              },
+              location_id: {
+                type: "string",
+                description: "ID of the location to associate with the expense (optional)"
+              },
+              custom_fields: {
+                type: "array",
+                description: "Custom fields to update (optional)",
+                items: {
+                  type: "object",
+                  properties: {
+                    key: {
+                      type: "string",
+                      description: "Key of the custom field"
+                    },
+                    value: {
+                      type: "object",
+                      description: "Value of the custom field"
+                    }
+                  }
+                }
+              }
+            },
+            required: ["expense_id"]
           }
         },
         // Pagination-aware tools

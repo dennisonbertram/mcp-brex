@@ -366,4 +366,91 @@ export class BrexClient {
       throw new Error('Failed to upload file: ' + (error instanceof Error ? error.message : String(error)));
     }
   }
+
+  // General API methods for flexible endpoint access
+  
+  /**
+   * Generic GET method for Brex API
+   * @param endpoint API endpoint path (starting with /)
+   * @param params Optional query parameters
+   * @returns Response data
+   */
+  async get(endpoint: string, params?: Record<string, any>): Promise<any> {
+    try {
+      logDebug(`Making GET request to Brex API endpoint: ${endpoint}`, { params });
+      const response = await this.client.get(endpoint, { params });
+      return response.data;
+    } catch (error) {
+      this.handleApiError(error, 'GET', endpoint);
+      throw error;
+    }
+  }
+
+  /**
+   * Generic POST method for Brex API
+   * @param endpoint API endpoint path (starting with /)
+   * @param data Request body data
+   * @param params Optional query parameters
+   * @returns Response data
+   */
+  async post(endpoint: string, data: any, params?: Record<string, any>): Promise<any> {
+    try {
+      logDebug(`Making POST request to Brex API endpoint: ${endpoint}`, { params });
+      const response = await this.client.post(endpoint, data, { params });
+      return response.data;
+    } catch (error) {
+      this.handleApiError(error, 'POST', endpoint);
+      throw error;
+    }
+  }
+
+  /**
+   * Generic PUT method for Brex API
+   * @param endpoint API endpoint path (starting with /)
+   * @param data Request body data
+   * @param params Optional query parameters
+   * @returns Response data
+   */
+  async put(endpoint: string, data: any, params?: Record<string, any>): Promise<any> {
+    try {
+      logDebug(`Making PUT request to Brex API endpoint: ${endpoint}`, { params });
+      const response = await this.client.put(endpoint, data, { params });
+      return response.data;
+    } catch (error) {
+      this.handleApiError(error, 'PUT', endpoint);
+      throw error;
+    }
+  }
+
+  /**
+   * Handle API errors consistently
+   * @param error The error object
+   * @param method HTTP method used
+   * @param endpoint API endpoint path
+   */
+  private handleApiError(error: any, method: string, endpoint: string): void {
+    if (axios.isAxiosError(error)) {
+      if (error.response?.status === 401) {
+        logError(`Brex API authentication failed: Please check your API key in the .env file`, {
+          method,
+          endpoint,
+          status: error.response.status
+        });
+      } else if (error.response?.status === 404) {
+        logError(`Resource not found at ${endpoint}`, {
+          method,
+          endpoint,
+          status: error.response.status
+        });
+      } else {
+        logError(`Brex API error: ${error.response?.data?.message || error.message}`, {
+          method,
+          endpoint,
+          status: error.response?.status
+        });
+      }
+    } else {
+      logError(`Unexpected error during ${method} request to ${endpoint}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
 } 
