@@ -80,20 +80,38 @@ npm run build
 
 ### Configuration with Claude
 
-To use with Claude Desktop, add the server config:
+To use with Claude Desktop, you need to add the server to Claude's configuration file:
 
-On MacOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-On Windows: `%APPDATA%/Claude/claude_desktop_config.json`
+On macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+On Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+1. Open Claude for Desktop and go to settings by clicking on the Claude menu and selecting "Settings..."
+2. Click on "Developer" in the left sidebar, then click "Edit Config"
+3. Update the configuration file with the Brex MCP server settings, including your API key:
 
 ```json
 {
   "mcpServers": {
     "brex-server": {
-      "command": "/path/to/brex-mcp-server/build/index.js"
+      "command": "node",
+      "args": [
+        "/path/to/brex-mcp-server/build/index.js",
+        "--brex-api-token=your_brex_api_token_here"
+      ]
     }
   }
 }
 ```
+
+Make sure to:
+- Replace `/path/to/brex-mcp-server` with the actual path where you installed the server
+- Replace `your_brex_api_token_here` with your actual Brex API token
+- Use absolute paths for the server location
+
+4. Save the file and restart Claude for Desktop
+5. Verify the server is working by checking for the hammer icon in the bottom right corner of the input box
+
+> **Note**: Passing the API token via configuration is more convenient when using Claude Desktop, but you can also continue to use the `.env` file method described above.
 
 ## Development
 
