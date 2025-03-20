@@ -10,6 +10,9 @@ import { registerGetTransactions } from "./getTransactions.js";
 import { registerGetExpenses } from "./getExpenses.js";
 import { registerGetAccountDetails } from "./getAccountDetails.js";
 import { registerUploadReceipt } from "./uploadReceipt.js";
+import { registerGetAllAccounts } from "./getAllAccounts.js";
+import { registerGetAllExpenses } from "./getAllExpenses.js";
+import { registerGetAllCardExpenses } from "./getAllCardExpenses.js";
 import { logError } from "../utils/logger.js";
 import { ExpenseType, ExpenseStatus, ExpensePaymentStatus } from "../services/brex/expenses-types.js";
 
@@ -26,6 +29,11 @@ export function registerTools(server: Server): void {
   registerGetExpenses(server);
   registerGetAccountDetails(server);
   registerUploadReceipt(server);
+  
+  // Register pagination-aware tool handlers
+  registerGetAllAccounts(server);
+  registerGetAllExpenses(server);
+  registerGetAllCardExpenses(server);
 
   // Register the list tools handler
   registerListToolsHandler(server);
@@ -122,6 +130,123 @@ function registerListToolsHandler(server: Server): void {
               }
             },
             required: ["receipt_data", "receipt_name", "content_type"]
+          }
+        },
+        // Pagination-aware tools
+        {
+          name: "get_all_accounts",
+          description: "Get all Brex accounts with pagination support",
+          inputSchema: {
+            type: "object",
+            properties: {
+              page_size: {
+                type: "number",
+                description: "Number of items per page (default: 50, max: 100)"
+              },
+              max_items: {
+                type: "number",
+                description: "Maximum total number of items to retrieve across all pages"
+              },
+              status: {
+                type: "string",
+                enum: ["ACTIVE", "INACTIVE", "CLOSED"],
+                description: "Filter accounts by status"
+              }
+            }
+          }
+        },
+        {
+          name: "get_all_expenses",
+          description: "Get all Brex expenses with pagination and filtering support",
+          inputSchema: {
+            type: "object",
+            properties: {
+              page_size: {
+                type: "number",
+                description: "Number of items per page (default: 50, max: 100)"
+              },
+              max_items: {
+                type: "number",
+                description: "Maximum total number of items to retrieve across all pages"
+              },
+              expense_type: {
+                type: "array",
+                items: {
+                  type: "string",
+                  enum: Object.values(ExpenseType)
+                },
+                description: "Filter expenses by type"
+              },
+              status: {
+                type: "array",
+                items: {
+                  type: "string",
+                  enum: Object.values(ExpenseStatus)
+                },
+                description: "Filter expenses by status"
+              },
+              payment_status: {
+                type: "array",
+                items: {
+                  type: "string",
+                  enum: Object.values(ExpensePaymentStatus)
+                },
+                description: "Filter expenses by payment status"
+              },
+              start_date: {
+                type: "string",
+                description: "Filter expenses created on or after this date (ISO format)"
+              },
+              end_date: {
+                type: "string",
+                description: "Filter expenses created on or before this date (ISO format)"
+              }
+            }
+          }
+        },
+        {
+          name: "get_all_card_expenses",
+          description: "Get all Brex card expenses with pagination and filtering support",
+          inputSchema: {
+            type: "object",
+            properties: {
+              page_size: {
+                type: "number",
+                description: "Number of items per page (default: 50, max: 100)"
+              },
+              max_items: {
+                type: "number",
+                description: "Maximum total number of items to retrieve across all pages"
+              },
+              status: {
+                type: "array",
+                items: {
+                  type: "string",
+                  enum: Object.values(ExpenseStatus)
+                },
+                description: "Filter card expenses by status"
+              },
+              payment_status: {
+                type: "array",
+                items: {
+                  type: "string",
+                  enum: Object.values(ExpensePaymentStatus)
+                },
+                description: "Filter card expenses by payment status"
+              },
+              start_date: {
+                type: "string",
+                description: "Filter card expenses created on or after this date (ISO format)"
+              },
+              end_date: {
+                type: "string",
+                description: "Filter card expenses created on or before this date (ISO format)"
+              },
+              merchant_name: {
+                type: "string",
+                description: "Filter card expenses by merchant name (partial match)"
+              }
+            }
           }
         }
       ]
