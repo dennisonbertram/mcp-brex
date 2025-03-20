@@ -90,29 +90,29 @@
 ## Phase 4: Budget and Expense Resources (Week 7-8)
 
 ### 1. Budget Resources
-- [ ] Implement `brex://budgets` resource handler
+- [x] Implement `brex://budgets` resource handler
   - Connect to Brex `/v2/budgets` API
   - Add pagination support
   - Support filtering by cursor and limit
-- [ ] Implement `brex://budgets/{id}` resource handler
+- [x] Implement `brex://budgets/{id}` resource handler
   - Connect to GET `/v2/budgets/{id}` API
   - Add error handling for not found
 
 ### 2. Spend Limits Resources
-- [ ] Implement `brex://spend_limits` resource handler
+- [x] Implement `brex://spend_limits` resource handler
   - Connect to Brex `/v2/spend_limits` API
   - Add pagination and filtering support
   - Handle response formatting
-- [ ] Implement `brex://spend_limits/{id}` resource handler
+- [x] Implement `brex://spend_limits/{id}` resource handler
   - Connect to GET `/v2/spend_limits/{id}` API
   - Add proper error handling
 
 ### 3. Budget Programs Resources
-- [ ] Implement `brex://budget_programs` resource handler
+- [x] Implement `brex://budget_programs` resource handler
   - Connect to Brex `/v1/budget_programs` API
   - Add pagination support
   - Support filtering by cursor and limit
-- [ ] Implement `brex://budget_programs/{id}` resource handler
+- [x] Implement `brex://budget_programs/{id}` resource handler
   - Connect to GET `/v1/budget_programs/{id}` API
   - Add error handling for not found
 
