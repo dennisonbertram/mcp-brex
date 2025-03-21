@@ -24,6 +24,14 @@ import { appConfig } from '../../config/index.js';
 import { logError, logInfo, logWarn, logDebug } from '../../utils/logger.js';
 import { BrexAccount, BrexTransaction, BrexPaginatedResponse } from './types.js';
 import {
+  CardAccount,
+  CashAccount,
+  PageCashAccount,
+  PageStatement,
+  PageCardTransaction,
+  PageCashTransaction
+} from './transactions-types.js';
+import {
   Expense,
   SimpleExpense,
   ExpensesResponse,
@@ -100,43 +108,191 @@ export class BrexClient {
   // Accounts API
   async getAccounts(): Promise<BrexPaginatedResponse<BrexAccount>> {
     try {
-      logDebug('Fetching accounts from Brex API using v2/accounts/cash endpoint');
       const response = await this.client.get('/v2/accounts/cash');
       return response.data;
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 401) {
-        throw new Error(`Brex API authentication failed: Please check your API key in the .env file`);
-      }
+      this.handleApiError(error, 'GET', '/v2/accounts/cash');
       throw error;
     }
   }
 
   async getAccount(accountId: string): Promise<BrexAccount> {
     try {
-      logDebug(`Fetching account ${accountId} from Brex API`);
-      // First try to get specific account details
-      try {
-        const response = await this.client.get(`/v2/accounts/cash/${accountId}`);
-        return response.data;
-      } catch (error) {
-        if (axios.isAxiosError(error) && error.response?.status === 404) {
-          // If specific endpoint fails, get all accounts and filter
-          logDebug(`Account endpoint not found, falling back to accounts list for ${accountId}`);
-          const accounts = await this.getAccounts();
-          const account = accounts.items.find(acc => acc.id === accountId);
-          
-          if (!account) {
-            throw new Error(`Account with ID ${accountId} not found`);
-          }
-          
-          return account;
-        }
-        throw error;
-      }
+      const response = await this.client.get(`/v2/accounts/cash/${accountId}`);
+      return response.data;
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 401) {
-        throw new Error(`Brex API authentication failed: Please check your API key in the .env file`);
+      this.handleApiError(error, 'GET', `/v2/accounts/cash/${accountId}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Get card accounts
+   * @returns List of card accounts
+   */
+  async getCardAccounts(): Promise<CardAccount[]> {
+    try {
+      logDebug('Fetching card accounts from Brex API');
+      const response = await this.client.get('/v2/accounts/card');
+      logDebug(`Successfully fetched ${response.data.length} card accounts`);
+      return response.data;
+    } catch (error) {
+      this.handleApiError(error, 'GET', '/v2/accounts/card');
+      throw error;
+    }
+  }
+
+  /**
+   * Get primary card account statements
+   * @param cursor Pagination cursor
+   * @param limit Number of items per page
+   * @returns Paginated list of statements
+   */
+  async getPrimaryCardStatements(cursor?: string, limit?: number): Promise<PageStatement> {
+    try {
+      const params: Record<string, any> = {};
+      if (cursor) params.cursor = cursor;
+      if (limit) params.limit = limit;
+
+      logDebug('Fetching primary card account statements from Brex API');
+      const response = await this.client.get('/v2/accounts/card/primary/statements', { params });
+      logDebug(`Successfully fetched ${response.data.items.length} primary card statements`);
+      return response.data;
+    } catch (error) {
+      this.handleApiError(error, 'GET', '/v2/accounts/card/primary/statements');
+      throw error;
+    }
+  }
+
+  /**
+   * Get cash accounts
+   * @returns Paginated list of cash accounts
+   */
+  async getCashAccounts(): Promise<PageCashAccount> {
+    try {
+      logDebug('Fetching cash accounts from Brex API');
+      const response = await this.client.get('/v2/accounts/cash');
+      logDebug(`Successfully fetched ${response.data.items.length} cash accounts`);
+      return response.data;
+    } catch (error) {
+      this.handleApiError(error, 'GET', '/v2/accounts/cash');
+      throw error;
+    }
+  }
+
+  /**
+   * Get primary cash account
+   * @returns Primary cash account
+   */
+  async getPrimaryCashAccount(): Promise<CashAccount> {
+    try {
+      logDebug('Fetching primary cash account from Brex API');
+      const response = await this.client.get('/v2/accounts/cash/primary');
+      logDebug('Successfully fetched primary cash account');
+      return response.data;
+    } catch (error) {
+      this.handleApiError(error, 'GET', '/v2/accounts/cash/primary');
+      throw error;
+    }
+  }
+
+  /**
+   * Get cash account by ID
+   * @param id Account ID
+   * @returns Cash account
+   */
+  async getCashAccountById(id: string): Promise<CashAccount> {
+    try {
+      logDebug(`Fetching cash account ${id} from Brex API`);
+      const response = await this.client.get(`/v2/accounts/cash/${id}`);
+      logDebug(`Successfully fetched cash account ${id}`);
+      return response.data;
+    } catch (error) {
+      this.handleApiError(error, 'GET', `/v2/accounts/cash/${id}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Get cash account statements
+   * @param id Account ID
+   * @param cursor Pagination cursor
+   * @param limit Number of items per page
+   * @returns Paginated list of statements
+   */
+  async getCashAccountStatements(id: string, cursor?: string, limit?: number): Promise<PageStatement> {
+    try {
+      const params: Record<string, any> = {};
+      if (cursor) params.cursor = cursor;
+      if (limit) params.limit = limit;
+
+      logDebug(`Fetching statements for cash account ${id} from Brex API`);
+      const response = await this.client.get(`/v2/accounts/cash/${id}/statements`, { params });
+      logDebug(`Successfully fetched ${response.data.items.length} statements for cash account ${id}`);
+      return response.data;
+    } catch (error) {
+      this.handleApiError(error, 'GET', `/v2/accounts/cash/${id}/statements`);
+      throw error;
+    }
+  }
+
+  /**
+   * Get card transactions
+   * @param options Options for fetching card transactions
+   * @returns Paginated list of card transactions
+   */
+  async getCardTransactions(options?: {
+    cursor?: string;
+    limit?: number;
+    user_ids?: string[];
+    posted_at_start?: string;
+    expand?: string[];
+  }): Promise<PageCardTransaction> {
+    try {
+      const params: Record<string, any> = {};
+      if (options) {
+        if (options.cursor) params.cursor = options.cursor;
+        if (options.limit) params.limit = options.limit;
+        if (options.user_ids && options.user_ids.length > 0) params.user_ids = options.user_ids;
+        if (options.posted_at_start) params.posted_at_start = options.posted_at_start;
+        if (options.expand && options.expand.length > 0) params['expand[]'] = options.expand;
       }
+
+      logDebug('Fetching card transactions from Brex API');
+      const response = await this.client.get('/v2/transactions/card/primary', { params });
+      logDebug(`Successfully fetched ${response.data.items.length} card transactions`);
+      return response.data;
+    } catch (error) {
+      this.handleApiError(error, 'GET', '/v2/transactions/card/primary');
+      throw error;
+    }
+  }
+
+  /**
+   * Get cash transactions
+   * @param id Account ID
+   * @param options Options for fetching cash transactions
+   * @returns Paginated list of cash transactions
+   */
+  async getCashTransactions(id: string, options?: {
+    cursor?: string;
+    limit?: number;
+    posted_at_start?: string;
+  }): Promise<PageCashTransaction> {
+    try {
+      const params: Record<string, any> = {};
+      if (options) {
+        if (options.cursor) params.cursor = options.cursor;
+        if (options.limit) params.limit = options.limit;
+        if (options.posted_at_start) params.posted_at_start = options.posted_at_start;
+      }
+
+      logDebug(`Fetching cash transactions for account ${id} from Brex API`);
+      const response = await this.client.get(`/v2/transactions/cash/${id}`, { params });
+      logDebug(`Successfully fetched ${response.data.items.length} cash transactions for account ${id}`);
+      return response.data;
+    } catch (error) {
+      this.handleApiError(error, 'GET', `/v2/transactions/cash/${id}`);
       throw error;
     }
   }

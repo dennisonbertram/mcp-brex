@@ -182,35 +182,35 @@
 ## Phase 6: Transaction and Account Resources (Week 13-14)
 
 ### 1. Card Account Resources
-- [ ] Implement `brex://accounts/card/list` endpoint
+- [x] Implement `brex://accounts/card/list` endpoint
   - Connect to GET `/v2/accounts/card` API
   - Retrieve and format all card accounts
   - Add proper error handling and response validation
-- [ ] Implement `brex://accounts/card/primary/statements` endpoint
+- [x] Implement `brex://accounts/card/primary/statements` endpoint
   - Connect to GET `/v2/accounts/card/primary/statements` API
   - Add pagination support with cursor and limit parameters
   - Implement caching for frequently accessed statements
   
 ### 2. Cash Account Resources
-- [ ] Implement `brex://accounts/cash/list` endpoint
+- [x] Implement `brex://accounts/cash/list` endpoint
   - Connect to GET `/v2/accounts/cash` API
   - Add pagination support
   - Handle response formatting
-- [ ] Implement `brex://accounts/cash/primary` endpoint
+- [x] Implement `brex://accounts/cash/primary` endpoint
   - Connect to GET `/v2/accounts/cash/primary` API
   - Add proper error handling
   - Implement caching for improved performance
-- [ ] Implement `brex://accounts/cash/{id}` endpoint
+- [x] Implement `brex://accounts/cash/{id}` endpoint
   - Connect to GET `/v2/accounts/cash/{id}` API
   - Add validation for ID parameter
   - Ensure proper error handling for non-existent accounts
-- [ ] Implement `brex://accounts/cash/{id}/statements` endpoint
+- [x] Implement `brex://accounts/cash/{id}/statements` endpoint
   - Connect to GET `/v2/accounts/cash/{id}/statements` API
   - Add pagination support with cursor and limit parameters
   - Implement caching for frequently accessed statements
   
 ### 3. Transaction Resources
-- [ ] Implement `brex://transactions/card/primary` endpoint
+- [x] Implement `brex://transactions/card/primary` endpoint
   - Connect to GET `/v2/transactions/card/primary` API
   - Add support for all query parameters:
     - cursor and limit for pagination
@@ -218,7 +218,7 @@
     - posted_at_start for date filtering
     - expand[] for expanding expense_id information
   - Add proper response validation and error handling
-- [ ] Implement `brex://transactions/cash/{id}` endpoint
+- [x] Implement `brex://transactions/cash/{id}` endpoint
   - Connect to GET `/v2/transactions/cash/{id}` API
   - Add support for query parameters:
     - cursor and limit for pagination

@@ -12,6 +12,9 @@ import { registerCardExpensesResource } from "./cardExpenses.js";
 import { registerBudgetsResource } from "./budgets.js";
 import { registerSpendLimitsResource } from "./spendLimits.js";
 import { registerBudgetProgramsResource } from "./budgetPrograms.js";
+import { registerCardAccountsResource } from "./cardAccounts.js";
+import { registerCashAccountsResource } from "./cashAccounts.js";
+import { registerTransactionsResource } from "./transactions.js";
 import { logInfo, logDebug, logError } from "../utils/logger.js";
 
 /**
@@ -26,6 +29,9 @@ export function registerResources(server: Server): void {
   registerBudgetsResource(server);
   registerSpendLimitsResource(server);
   registerBudgetProgramsResource(server);
+  registerCardAccountsResource(server);
+  registerCashAccountsResource(server);
+  registerTransactionsResource(server);
 
   // Register the list resources handler
   registerListResourcesHandler(server);
@@ -49,6 +55,30 @@ function registerListResourcesHandler(server: Server): void {
           mimeType: "application/json",
           name: "Brex Accounts",
           description: "List of all Brex accounts"
+        },
+        {
+          uri: "brex://accounts/card",
+          mimeType: "application/json",
+          name: "Brex Card Accounts",
+          description: "List of all Brex card accounts"
+        },
+        {
+          uri: "brex://accounts/cash",
+          mimeType: "application/json",
+          name: "Brex Cash Accounts",
+          description: "List of all Brex cash accounts"
+        },
+        {
+          uri: "brex://accounts/cash/primary",
+          mimeType: "application/json",
+          name: "Brex Primary Cash Account",
+          description: "Brex primary cash account details"
+        },
+        {
+          uri: "brex://transactions/card/primary",
+          mimeType: "application/json",
+          name: "Brex Card Transactions",
+          description: "List of all Brex card transactions"
         },
         {
           uri: "brex://expenses",
@@ -98,6 +128,30 @@ function registerListResourcesHandler(server: Server): void {
             mimeType: "application/json",
             name: "Brex Accounts",
             description: "List of all Brex accounts"
+          },
+          {
+            uri: "brex://accounts/card",
+            mimeType: "application/json",
+            name: "Brex Card Accounts",
+            description: "List of all Brex card accounts"
+          },
+          {
+            uri: "brex://accounts/cash",
+            mimeType: "application/json",
+            name: "Brex Cash Accounts",
+            description: "List of all Brex cash accounts"
+          },
+          {
+            uri: "brex://accounts/cash/primary",
+            mimeType: "application/json",
+            name: "Brex Primary Cash Account",
+            description: "Brex primary cash account details"
+          },
+          {
+            uri: "brex://transactions/card/primary",
+            mimeType: "application/json",
+            name: "Brex Card Transactions",
+            description: "List of all Brex card transactions"
           },
           {
             uri: "brex://expenses",
