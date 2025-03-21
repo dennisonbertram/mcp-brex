@@ -105,7 +105,8 @@ export function registerCardExpensesResource(server: Server): void {
         logDebug("Fetching all card expenses from Brex API");
         const listParams: ListExpensesParams = {
           expense_type: [ExpenseType.CARD],
-          limit: 50
+          limit: 50,
+          expand: ['merchant'] // Always expand merchant information
         };
         const cardExpenses = await brexClient.getCardExpenses(listParams);
         logDebug(`Successfully fetched ${cardExpenses.items.length} card expenses`);
