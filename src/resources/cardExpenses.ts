@@ -65,6 +65,14 @@ function normalizeCardExpense(expense: any, id?: string): any {
     (normalizedExpense as any).merchant_name = 'Merchant ID: ' + normalizedExpense.merchant_id;
   }
   
+  // Format budget information
+  if (normalizedExpense.budget_id && !normalizedExpense.budget) {
+    normalizedExpense.budget = {
+      id: normalizedExpense.budget_id,
+      name: 'Budget ID: ' + normalizedExpense.budget_id
+    };
+  }
+  
   return normalizedExpense;
 }
 
@@ -106,7 +114,7 @@ export function registerCardExpensesResource(server: Server): void {
         const listParams: ListExpensesParams = {
           expense_type: [ExpenseType.CARD],
           limit: 50,
-          expand: ['merchant'] // Always expand merchant information
+          expand: ['merchant', 'budget'] // Always expand merchant and budget information
         };
         const cardExpenses = await brexClient.getCardExpenses(listParams);
         logDebug(`Successfully fetched ${cardExpenses.items.length} card expenses`);
@@ -126,7 +134,7 @@ export function registerCardExpensesResource(server: Server): void {
       try {
         logDebug(`Fetching card expense ${params.id} from Brex API`);
         const cardExpense = await brexClient.getCardExpense(params.id, { 
-          expand: ['merchant', 'location', 'department', 'receipts.download_uris'],
+          expand: ['merchant', 'budget', 'location', 'department', 'receipts.download_uris'],
           load_custom_fields: true
         });
         

@@ -56,7 +56,7 @@ export function registerExpensesResource(server: Server): void {
         logDebug("Fetching all expenses from Brex API");
         const listParams: ListExpensesParams = {
           limit: 50,
-          expand: ['merchant'] // Always expand merchant information
+          expand: ['merchant', 'budget'] // Always expand merchant and budget information
         };
         const expenses = await brexClient.getExpenses(listParams);
         logDebug(`Successfully fetched ${expenses.items.length} expenses`);
@@ -76,7 +76,7 @@ export function registerExpensesResource(server: Server): void {
       try {
         logDebug(`Fetching expense ${params.id} from Brex API`);
         const expense = await brexClient.getExpense(params.id, { 
-          expand: ['merchant', 'location', 'department', 'receipts.download_uris'],
+          expand: ['merchant', 'budget', 'location', 'department', 'receipts.download_uris'],
           load_custom_fields: true
         });
         

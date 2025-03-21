@@ -163,7 +163,7 @@ async function fetchAllExpenses(client: BrexClient, params: GetAllExpensesParams
       const requestParams: ListExpensesParams = {
         limit,
         cursor,
-        expand: ['merchant'] // Always expand merchant information
+        expand: ['merchant', 'budget'] // Always expand merchant and budget information
       };
       
       // Add filters if provided

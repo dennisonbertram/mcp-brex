@@ -156,7 +156,7 @@ async function fetchAllCardExpenses(client: BrexClient, params: GetAllCardExpens
         limit,
         cursor,
         expense_type: [ExpenseType.CARD],
-        expand: ['merchant'] // Always expand merchant information
+        expand: ['merchant', 'budget'] // Always expand merchant and budget information
       };
       
       // Add filters if provided
