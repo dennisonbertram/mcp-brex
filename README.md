@@ -27,6 +27,8 @@ The server implements standardized resource handlers and tools following the MCP
 - `brex://expenses/card` - List all card expenses
 - `brex://expenses/card/{id}` - Access specific card expense details
 
+> **Note**: Expense resources automatically expand merchant and budget information to display human-readable names instead of IDs.
+
 #### Budget Resources
 - `brex://budgets` - List all budgets with pagination
 - `brex://budgets/{id}` - Access specific budget details
@@ -46,6 +48,8 @@ The server implements standardized resource handlers and tools following the MCP
 
 #### Expense Management
 - `update_expense` - Update details for a card expense (memo, category, etc.)
+- `get_all_expenses` - Get all expenses with filtering options and expanded merchant/budget information
+- `get_all_card_expenses` - Get all card expenses with filtering options and expanded merchant/budget information
 
 > **Note**: For security reasons, tools that create, update, or delete budgets, spend limits, and budget programs are not implemented in this version.
 

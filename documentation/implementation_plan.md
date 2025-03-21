@@ -226,6 +226,17 @@
   - Add validation for ID parameter
   - Ensure proper error handling
 
+### 4. Enhanced Expense Information
+- [x] Implement automatic budget and merchant expansion in expenses
+  - Update all expense resource handlers to automatically include expanded merchant information
+  - Update all expense resource handlers to automatically include expanded budget information
+  - Ensure human-readable merchant names are displayed instead of IDs
+  - Ensure human-readable budget names are displayed instead of IDs
+  - Update all expense-related tools to include expanded information:
+    - Updated `get_all_expenses` tool
+    - Updated `get_all_card_expenses` tool
+  - Fallback formatting for cases when expanded information is not available
+
 ## Phase 7: Optimization and Documentation (Week 15-16)
 
 ### 1. Performance Optimization
