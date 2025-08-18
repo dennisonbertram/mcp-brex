@@ -88,7 +88,7 @@ export function registerGetExpenses(server: Server): void {
   registerToolHandler("get_expenses", async (request) => {
     try {
       // Validate parameters
-      const params = validateParams(request.params.input);
+      const params = validateParams(request.params.arguments);
       logDebug(`Getting expenses with params: ${JSON.stringify(params)}`);
       
       // Get Brex client

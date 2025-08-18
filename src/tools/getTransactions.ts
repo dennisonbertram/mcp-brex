@@ -62,7 +62,7 @@ export function registerGetTransactions(server: Server): void {
   registerToolHandler("get_transactions", async (request) => {
     try {
       // Validate parameters
-      const params = validateParams(request.params.input);
+      const params = validateParams(request.params.arguments);
       logDebug(`Getting transactions for account ${params.accountId}`);
       
       // Get Brex client

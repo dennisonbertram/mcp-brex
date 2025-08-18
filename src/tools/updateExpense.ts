@@ -115,7 +115,7 @@ export function registerUpdateExpense(server: Server): void {
   registerToolHandler("update_expense", async (request) => {
     try {
       // Validate parameters
-      const params = validateParams(request.params.input);
+      const params = validateParams(request.params.arguments);
       logDebug(`Updating expense with ID: ${params.expense_id}`);
       
       // Get Brex client

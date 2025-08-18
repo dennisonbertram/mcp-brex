@@ -99,7 +99,7 @@ export function registerMatchReceipt(server: Server): void {
   registerToolHandler("match_receipt", async (request) => {
     try {
       // Validate parameters
-      const params = validateParams(request.params.input);
+      const params = validateParams(request.params.arguments);
       logDebug(`Creating receipt match for: ${params.receipt_name}`);
       
       // Get Brex client

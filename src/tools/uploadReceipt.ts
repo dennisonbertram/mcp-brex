@@ -104,8 +104,8 @@ export function registerUploadReceipt(server: Server): void {
   registerToolHandler("upload_receipt", async (request) => {
     try {
       // Validate parameters
-      const params = validateParams(request.params.input);
-      logDebug(`Uploading receipt: ${params.receipt_name} (${params.content_type})`);
+      const params = validateParams(request.params.arguments);
+      logDebug(`Uploading receipt named: ${params.receipt_name}`);
       
       // Get Brex client
       const brexClient = getBrexClient();

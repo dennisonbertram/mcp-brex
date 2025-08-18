@@ -50,7 +50,7 @@ export function registerGetAccountDetails(server: Server): void {
   registerToolHandler("get_account_details", async (request) => {
     try {
       // Validate parameters
-      const params = validateParams(request.params.input);
+      const params = validateParams(request.params.arguments);
       logDebug(`Getting account details for account ${params.accountId}`);
       
       // Get Brex client

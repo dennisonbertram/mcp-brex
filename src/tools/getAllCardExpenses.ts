@@ -223,7 +223,7 @@ export function registerGetAllCardExpenses(_server: Server): void {
   registerToolHandler("get_all_card_expenses", async (request) => {
     try {
       // Validate parameters
-      const params = validateParams(request.params.input);
+      const params = validateParams(request.params.arguments);
       logDebug(`Getting all card expenses with params: ${JSON.stringify(params)}`);
       
       // Get Brex client

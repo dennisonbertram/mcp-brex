@@ -122,7 +122,7 @@ export function registerGetAllAccounts(server: Server): void {
   registerToolHandler("get_all_accounts", async (request) => {
     try {
       // Validate parameters
-      const params = validateParams(request.params.input);
+      const params = validateParams(request.params.arguments);
       logDebug(`Getting all accounts with params: ${JSON.stringify(params)}`);
       
       // Get Brex client

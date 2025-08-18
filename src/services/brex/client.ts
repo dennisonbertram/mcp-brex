@@ -586,7 +586,7 @@ export class BrexClient {
   async getBudgets(params?: BudgetListParams): Promise<BudgetsResponse> {
     try {
       logDebug('Fetching budgets from Brex API', { params });
-      return await this.get('/v2/budgets', params);
+      return await this.get<BudgetsResponse>('/v2/budgets', params as unknown as Record<string, any>);
     } catch (error) {
       logError(`Error fetching budgets: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
@@ -601,7 +601,7 @@ export class BrexClient {
   async getBudget(budgetId: string): Promise<Budget> {
     try {
       logDebug(`Fetching budget ${budgetId} from Brex API`);
-      return await this.get(`/v2/budgets/${budgetId}`);
+      return await this.get<Budget>(`/v2/budgets/${budgetId}`);
     } catch (error) {
       logError(`Error fetching budget ${budgetId}: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
@@ -616,7 +616,7 @@ export class BrexClient {
   async createBudget(data: CreateBudgetRequest): Promise<Budget> {
     try {
       logDebug('Creating new budget in Brex API');
-      return await this.post('/v2/budgets', data);
+      return await this.post<Budget>('/v2/budgets', data);
     } catch (error) {
       logError(`Error creating budget: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
@@ -632,7 +632,7 @@ export class BrexClient {
   async updateBudget(budgetId: string, data: UpdateBudgetRequest): Promise<Budget> {
     try {
       logDebug(`Updating budget ${budgetId} in Brex API`);
-      return await this.put(`/v2/budgets/${budgetId}`, data);
+      return await this.put<Budget>(`/v2/budgets/${budgetId}`, data);
     } catch (error) {
       logError(`Error updating budget ${budgetId}: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
@@ -647,7 +647,7 @@ export class BrexClient {
   async archiveBudget(budgetId: string): Promise<Budget> {
     try {
       logDebug(`Archiving budget ${budgetId} in Brex API`);
-      return await this.post(`/v2/budgets/${budgetId}/archive`, {});
+      return await this.post<Budget>(`/v2/budgets/${budgetId}/archive`, {});
     } catch (error) {
       logError(`Error archiving budget ${budgetId}: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
@@ -664,7 +664,7 @@ export class BrexClient {
   async getSpendLimits(params?: SpendLimitListParams): Promise<SpendLimitsResponse> {
     try {
       logDebug('Fetching spend limits from Brex API', { params });
-      return await this.get('/v2/spend_limits', params);
+      return await this.get<SpendLimitsResponse>('/v2/spend_limits', params as unknown as Record<string, any>);
     } catch (error) {
       logError(`Error fetching spend limits: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
@@ -679,7 +679,7 @@ export class BrexClient {
   async getSpendLimit(spendLimitId: string): Promise<SpendLimit> {
     try {
       logDebug(`Fetching spend limit ${spendLimitId} from Brex API`);
-      return await this.get(`/v2/spend_limits/${spendLimitId}`);
+      return await this.get<SpendLimit>(`/v2/spend_limits/${spendLimitId}`);
     } catch (error) {
       logError(`Error fetching spend limit ${spendLimitId}: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
@@ -694,7 +694,7 @@ export class BrexClient {
   async createSpendLimit(data: CreateSpendLimitRequest): Promise<SpendLimit> {
     try {
       logDebug('Creating new spend limit in Brex API');
-      return await this.post('/v2/spend_limits', data);
+      return await this.post<SpendLimit>('/v2/spend_limits', data);
     } catch (error) {
       logError(`Error creating spend limit: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
@@ -710,7 +710,7 @@ export class BrexClient {
   async updateSpendLimit(spendLimitId: string, data: UpdateSpendLimitRequest): Promise<SpendLimit> {
     try {
       logDebug(`Updating spend limit ${spendLimitId} in Brex API`);
-      return await this.put(`/v2/spend_limits/${spendLimitId}`, data);
+      return await this.put<SpendLimit>(`/v2/spend_limits/${spendLimitId}`, data);
     } catch (error) {
       logError(`Error updating spend limit ${spendLimitId}: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
@@ -725,7 +725,7 @@ export class BrexClient {
   async archiveSpendLimit(spendLimitId: string): Promise<SpendLimit> {
     try {
       logDebug(`Archiving spend limit ${spendLimitId} in Brex API`);
-      return await this.post(`/v2/spend_limits/${spendLimitId}/archive`, {});
+      return await this.post<SpendLimit>(`/v2/spend_limits/${spendLimitId}/archive`, {});
     } catch (error) {
       logError(`Error archiving spend limit ${spendLimitId}: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
@@ -742,7 +742,7 @@ export class BrexClient {
   async getBudgetPrograms(params?: BudgetProgramListParams): Promise<BudgetProgramsResponse> {
     try {
       logDebug('Fetching budget programs from Brex API', { params });
-      return await this.get('/v1/budget_programs', params);
+      return await this.get<BudgetProgramsResponse>('/v1/budget_programs', params as unknown as Record<string, any>);
     } catch (error) {
       logError(`Error fetching budget programs: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
@@ -757,7 +757,7 @@ export class BrexClient {
   async getBudgetProgram(programId: string): Promise<BudgetProgram> {
     try {
       logDebug(`Fetching budget program ${programId} from Brex API`);
-      return await this.get(`/v1/budget_programs/${programId}`);
+      return await this.get<BudgetProgram>(`/v1/budget_programs/${programId}`);
     } catch (error) {
       logError(`Error fetching budget program ${programId}: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
@@ -772,7 +772,7 @@ export class BrexClient {
   async createBudgetProgram(data: CreateBudgetProgramRequest): Promise<BudgetProgram> {
     try {
       logDebug('Creating new budget program in Brex API');
-      return await this.post('/v1/budget_programs', data);
+      return await this.post<BudgetProgram>('/v1/budget_programs', data);
     } catch (error) {
       logError(`Error creating budget program: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
@@ -788,7 +788,7 @@ export class BrexClient {
   async updateBudgetProgram(programId: string, data: UpdateBudgetProgramRequest): Promise<BudgetProgram> {
     try {
       logDebug(`Updating budget program ${programId} in Brex API`);
-      return await this.put(`/v1/budget_programs/${programId}`, data);
+      return await this.put<BudgetProgram>(`/v1/budget_programs/${programId}`, data);
     } catch (error) {
       logError(`Error updating budget program ${programId}: ${error instanceof Error ? error.message : String(error)}`);
       throw error;
@@ -818,11 +818,11 @@ export class BrexClient {
    * @param params Optional query parameters
    * @returns Response data
    */
-  async get(endpoint: string, params?: Record<string, unknown>): Promise<unknown> {
+  async get<T = any>(endpoint: string, params?: Record<string, any>): Promise<T> {
     try {
       logDebug(`Making GET request to Brex API endpoint: ${endpoint}`, { params });
       const response = await this.client.get(endpoint, { params });
-      return response.data;
+      return response.data as T;
     } catch (error) {
       this.handleApiError(error, 'GET', endpoint);
       throw error;
@@ -836,11 +836,11 @@ export class BrexClient {
    * @param params Optional query parameters
    * @returns Response data
    */
-  async post(endpoint: string, data: unknown, params?: Record<string, unknown>): Promise<unknown> {
+  async post<T = any>(endpoint: string, data: unknown, params?: Record<string, any>): Promise<T> {
     try {
       logDebug(`Making POST request to Brex API endpoint: ${endpoint}`, { params });
       const response = await this.client.post(endpoint, data, { params });
-      return response.data;
+      return response.data as T;
     } catch (error) {
       this.handleApiError(error, 'POST', endpoint);
       throw error;
@@ -854,11 +854,11 @@ export class BrexClient {
    * @param params Optional query parameters
    * @returns Response data
    */
-  async put(endpoint: string, data: unknown, params?: Record<string, unknown>): Promise<unknown> {
+  async put<T = any>(endpoint: string, data: unknown, params?: Record<string, any>): Promise<T> {
     try {
       logDebug(`Making PUT request to Brex API endpoint: ${endpoint}`, { params });
       const response = await this.client.put(endpoint, data, { params });
-      return response.data;
+      return response.data as T;
     } catch (error) {
       this.handleApiError(error, 'PUT', endpoint);
       throw error;
