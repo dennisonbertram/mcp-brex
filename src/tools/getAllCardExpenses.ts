@@ -39,16 +39,17 @@ interface GetAllCardExpensesParams {
  * @param input The raw input parameters from the tool call
  * @returns Validated parameters
  */
-function validateParams(input: any): GetAllCardExpensesParams {
+function validateParams(input: unknown): GetAllCardExpensesParams {
   if (!input) {
     return {}; // All parameters are optional
   }
   
+  const raw = input as Record<string, unknown>;
   const params: GetAllCardExpensesParams = {};
   
   // Validate page_size if provided
-  if (input.page_size !== undefined) {
-    const pageSize = parseInt(input.page_size.toString(), 10);
+  if (raw.page_size !== undefined) {
+    const pageSize = parseInt(String(raw.page_size), 10);
     if (isNaN(pageSize) || pageSize <= 0 || pageSize > 100) {
       throw new Error("Invalid page_size: must be a positive number between 1 and 100");
     }
@@ -56,8 +57,8 @@ function validateParams(input: any): GetAllCardExpensesParams {
   }
   
   // Validate max_items if provided
-  if (input.max_items !== undefined) {
-    const maxItems = parseInt(input.max_items.toString(), 10);
+  if (raw.max_items !== undefined) {
+    const maxItems = parseInt(String(raw.max_items), 10);
     if (isNaN(maxItems) || maxItems <= 0) {
       throw new Error("Invalid max_items: must be a positive number");
     }
@@ -65,10 +66,10 @@ function validateParams(input: any): GetAllCardExpensesParams {
   }
   
   // Validate status if provided
-  if (input.status !== undefined) {
-    const statuses = Array.isArray(input.status) 
-      ? input.status 
-      : [input.status];
+  if (raw.status !== undefined) {
+    const statuses = Array.isArray(raw.status) 
+      ? raw.status 
+      : [raw.status];
       
     statuses.forEach((status: string) => {
       // Type assertion to ensure status is treated as the correct enum type
@@ -81,10 +82,10 @@ function validateParams(input: any): GetAllCardExpensesParams {
   }
   
   // Validate payment_status if provided
-  if (input.payment_status !== undefined) {
-    const paymentStatuses = Array.isArray(input.payment_status) 
-      ? input.payment_status 
-      : [input.payment_status];
+  if (raw.payment_status !== undefined) {
+    const paymentStatuses = Array.isArray(raw.payment_status) 
+      ? raw.payment_status 
+      : [raw.payment_status];
       
     paymentStatuses.forEach((status: string) => {
       // Type assertion to ensure status is treated as the correct enum type
@@ -97,9 +98,9 @@ function validateParams(input: any): GetAllCardExpensesParams {
   }
   
   // Validate start_date if provided
-  if (input.start_date !== undefined) {
+  if (raw.start_date !== undefined) {
     try {
-      const date = new Date(input.start_date);
+      const date = new Date(String(raw.start_date));
       if (isNaN(date.getTime())) {
         throw new Error("Invalid date format");
       }
@@ -110,9 +111,9 @@ function validateParams(input: any): GetAllCardExpensesParams {
   }
   
   // Validate end_date if provided
-  if (input.end_date !== undefined) {
+  if (raw.end_date !== undefined) {
     try {
-      const date = new Date(input.end_date);
+      const date = new Date(String(raw.end_date));
       if (isNaN(date.getTime())) {
         throw new Error("Invalid date format");
       }
@@ -123,11 +124,11 @@ function validateParams(input: any): GetAllCardExpensesParams {
   }
   
   // Add merchant name filter if provided
-  if (input.merchant_name !== undefined) {
-    if (typeof input.merchant_name !== 'string' || input.merchant_name.trim() === '') {
+  if (raw.merchant_name !== undefined) {
+    if (typeof raw.merchant_name !== 'string' || String(raw.merchant_name).trim() === '') {
       throw new Error("Invalid merchant_name: must be a non-empty string");
     }
-    params.merchant_name = input.merchant_name.trim();
+    params.merchant_name = String(raw.merchant_name).trim();
   }
   
   return params;
@@ -139,11 +140,11 @@ function validateParams(input: any): GetAllCardExpensesParams {
  * @param params Pagination parameters
  * @returns An array of all fetched card expenses
  */
-async function fetchAllCardExpenses(client: BrexClient, params: GetAllCardExpensesParams): Promise<any[]> {
+async function fetchAllCardExpenses(client: BrexClient, params: GetAllCardExpensesParams): Promise<unknown[]> {
   const pageSize = params.page_size || 50;
   const maxItems = params.max_items || Infinity;
   let cursor: string | undefined = undefined;
-  let allExpenses: any[] = [];
+  let allExpenses: unknown[] = [];
   let hasMore = true;
   
   while (hasMore && allExpenses.length < maxItems) {
@@ -173,16 +174,9 @@ async function fetchAllCardExpenses(client: BrexClient, params: GetAllCardExpens
         requestParams.updated_at_start = params.start_date;
       }
       
-      // There may not be a direct equivalent for created_at_end
-      // Let's assume updated_at_end exists, otherwise we'll need client-side filtering
+      // End date filter (server-side)
       if (params.end_date) {
-        if ('updated_at_end' in requestParams) {
-          // @ts-ignore - we're checking it exists at runtime
-          requestParams.updated_at_end = params.end_date;
-        } else {
-          // If no updated_at_end exists, we'll filter client-side
-          logDebug("Note: end_date filtering will be applied client-side");
-        }
+        requestParams.updated_at_end = params.end_date;
       }
       
       // Fetch page of card expenses
@@ -201,14 +195,7 @@ async function fetchAllCardExpenses(client: BrexClient, params: GetAllCardExpens
         });
       }
       
-      // Client-side end_date filtering if needed
-      if (params.end_date && !('updated_at_end' in requestParams)) {
-        const endDate = new Date(params.end_date).getTime();
-        validExpenses = validExpenses.filter(expense => {
-          const updatedAt = new Date(expense.updated_at).getTime();
-          return updatedAt <= endDate;
-        });
-      }
+      // No additional client-side end_date filtering needed when using updated_at_end
       
       allExpenses = allExpenses.concat(validExpenses);
       
@@ -232,7 +219,7 @@ async function fetchAllCardExpenses(client: BrexClient, params: GetAllCardExpens
  * Registers the get_all_card_expenses tool with the server
  * @param server The MCP server instance
  */
-export function registerGetAllCardExpenses(server: Server): void {
+export function registerGetAllCardExpenses(_server: Server): void {
   registerToolHandler("get_all_card_expenses", async (request) => {
     try {
       // Validate parameters

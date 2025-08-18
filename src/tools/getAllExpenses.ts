@@ -39,16 +39,17 @@ interface GetAllExpensesParams {
  * @param input The raw input parameters from the tool call
  * @returns Validated parameters
  */
-function validateParams(input: any): GetAllExpensesParams {
+function validateParams(input: unknown): GetAllExpensesParams {
   if (!input) {
     return {}; // All parameters are optional
   }
   
+  const raw = input as Record<string, unknown>;
   const params: GetAllExpensesParams = {};
   
   // Validate page_size if provided
-  if (input.page_size !== undefined) {
-    const pageSize = parseInt(input.page_size.toString(), 10);
+  if (raw.page_size !== undefined) {
+    const pageSize = parseInt(String(raw.page_size), 10);
     if (isNaN(pageSize) || pageSize <= 0 || pageSize > 100) {
       throw new Error("Invalid page_size: must be a positive number between 1 and 100");
     }
@@ -56,8 +57,8 @@ function validateParams(input: any): GetAllExpensesParams {
   }
   
   // Validate max_items if provided
-  if (input.max_items !== undefined) {
-    const maxItems = parseInt(input.max_items.toString(), 10);
+  if (raw.max_items !== undefined) {
+    const maxItems = parseInt(String(raw.max_items), 10);
     if (isNaN(maxItems) || maxItems <= 0) {
       throw new Error("Invalid max_items: must be a positive number");
     }
@@ -65,15 +66,15 @@ function validateParams(input: any): GetAllExpensesParams {
   }
   
   // Validate expense_type if provided
-  if (input.expense_type !== undefined) {
-    const expenseTypes = Array.isArray(input.expense_type) 
-      ? input.expense_type 
-      : [input.expense_type];
+  if (raw.expense_type !== undefined) {
+    const expenseTypes = Array.isArray(raw.expense_type) 
+      ? raw.expense_type 
+      : [raw.expense_type];
       
-    expenseTypes.forEach((type: string) => {
+    (expenseTypes as unknown[]).forEach((type) => {
       // Type assertion to ensure proper comparison
       if (!Object.values(ExpenseType).includes(type as ExpenseType)) {
-        throw new Error(`Invalid expense_type: ${type}`);
+        throw new Error(`Invalid expense_type: ${String(type)}`);
       }
     });
     
@@ -81,15 +82,15 @@ function validateParams(input: any): GetAllExpensesParams {
   }
   
   // Validate status if provided
-  if (input.status !== undefined) {
-    const statuses = Array.isArray(input.status) 
-      ? input.status 
-      : [input.status];
+  if (raw.status !== undefined) {
+    const statuses = Array.isArray(raw.status) 
+      ? raw.status 
+      : [raw.status];
       
-    statuses.forEach((status: string) => {
+    (statuses as unknown[]).forEach((status) => {
       // Type assertion to ensure proper comparison
       if (!Object.values(ExpenseStatus).includes(status as ExpenseStatus)) {
-        throw new Error(`Invalid status: ${status}`);
+        throw new Error(`Invalid status: ${String(status)}`);
       }
     });
     
@@ -97,15 +98,15 @@ function validateParams(input: any): GetAllExpensesParams {
   }
   
   // Validate payment_status if provided
-  if (input.payment_status !== undefined) {
-    const paymentStatuses = Array.isArray(input.payment_status) 
-      ? input.payment_status 
-      : [input.payment_status];
+  if (raw.payment_status !== undefined) {
+    const paymentStatuses = Array.isArray(raw.payment_status) 
+      ? raw.payment_status 
+      : [raw.payment_status];
       
-    paymentStatuses.forEach((status: string) => {
+    (paymentStatuses as unknown[]).forEach((status) => {
       // Type assertion to ensure proper comparison
       if (!Object.values(ExpensePaymentStatus).includes(status as ExpensePaymentStatus)) {
-        throw new Error(`Invalid payment_status: ${status}`);
+        throw new Error(`Invalid payment_status: ${String(status)}`);
       }
     });
     
@@ -113,9 +114,9 @@ function validateParams(input: any): GetAllExpensesParams {
   }
   
   // Validate start_date if provided
-  if (input.start_date !== undefined) {
+  if (raw.start_date !== undefined) {
     try {
-      const date = new Date(input.start_date);
+      const date = new Date(String(raw.start_date));
       if (isNaN(date.getTime())) {
         throw new Error("Invalid date format");
       }
@@ -126,9 +127,9 @@ function validateParams(input: any): GetAllExpensesParams {
   }
   
   // Validate end_date if provided
-  if (input.end_date !== undefined) {
+  if (raw.end_date !== undefined) {
     try {
-      const date = new Date(input.end_date);
+      const date = new Date(String(raw.end_date));
       if (isNaN(date.getTime())) {
         throw new Error("Invalid date format");
       }
@@ -147,11 +148,11 @@ function validateParams(input: any): GetAllExpensesParams {
  * @param params Pagination parameters
  * @returns An array of all fetched expenses
  */
-async function fetchAllExpenses(client: BrexClient, params: GetAllExpensesParams): Promise<any[]> {
+async function fetchAllExpenses(client: BrexClient, params: GetAllExpensesParams): Promise<unknown[]> {
   const pageSize = params.page_size || 50;
   const maxItems = params.max_items || Infinity;
   let cursor: string | undefined = undefined;
-  let allExpenses: any[] = [];
+  let allExpenses: unknown[] = [];
   let hasMore = true;
   
   while (hasMore && allExpenses.length < maxItems) {
@@ -184,15 +185,9 @@ async function fetchAllExpenses(client: BrexClient, params: GetAllExpensesParams
         requestParams.updated_at_start = params.start_date;
       }
       
-      // Handle end date with a fallback to client-side filtering
+      // Handle end date (server-side)
       if (params.end_date) {
-        if ('updated_at_end' in requestParams) {
-          // @ts-ignore - we're checking it exists at runtime
-          requestParams.updated_at_end = params.end_date;
-        } else {
-          // If no updated_at_end exists, we'll filter client-side
-          logDebug("Note: end_date filtering will be applied client-side");
-        }
+        requestParams.updated_at_end = params.end_date;
       }
       
       // Fetch page of expenses
@@ -216,7 +211,6 @@ async function fetchAllExpenses(client: BrexClient, params: GetAllExpensesParams
       logDebug(`Retrieved ${validExpenses.length} expenses (total: ${allExpenses.length})`);
       
       // Check if we should continue pagination
-      // Use camelCase property name
       cursor = response.nextCursor;
       hasMore = !!cursor;
       
@@ -233,7 +227,7 @@ async function fetchAllExpenses(client: BrexClient, params: GetAllExpensesParams
  * Registers the get_all_expenses tool with the server
  * @param server The MCP server instance
  */
-export function registerGetAllExpenses(server: Server): void {
+export function registerGetAllExpenses(_server: Server): void {
   registerToolHandler("get_all_expenses", async (request) => {
     try {
       // Validate parameters

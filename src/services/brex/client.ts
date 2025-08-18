@@ -19,7 +19,7 @@
  * - Implement rate limiting
  */
 
-import axios, { AxiosInstance, AxiosError } from 'axios';
+import axios, { AxiosInstance } from 'axios';
 import { appConfig } from '../../config/index.js';
 import { logError, logInfo, logWarn, logDebug } from '../../utils/logger.js';
 import { BrexAccount, BrexTransaction, BrexPaginatedResponse } from './types.js';
@@ -150,7 +150,7 @@ export class BrexClient {
    */
   async getPrimaryCardStatements(cursor?: string, limit?: number): Promise<PageStatement> {
     try {
-      const params: Record<string, any> = {};
+      const params: Record<string, unknown> = {};
       if (cursor) params.cursor = cursor;
       if (limit) params.limit = limit;
 
@@ -222,7 +222,7 @@ export class BrexClient {
    */
   async getCashAccountStatements(id: string, cursor?: string, limit?: number): Promise<PageStatement> {
     try {
-      const params: Record<string, any> = {};
+      const params: Record<string, unknown> = {};
       if (cursor) params.cursor = cursor;
       if (limit) params.limit = limit;
 
@@ -249,7 +249,7 @@ export class BrexClient {
     expand?: string[];
   }): Promise<PageCardTransaction> {
     try {
-      const params: Record<string, any> = {};
+      const params: Record<string, unknown> = {};
       if (options) {
         if (options.cursor) params.cursor = options.cursor;
         if (options.limit) params.limit = options.limit;
@@ -280,7 +280,7 @@ export class BrexClient {
     posted_at_start?: string;
   }): Promise<PageCashTransaction> {
     try {
-      const params: Record<string, any> = {};
+      const params: Record<string, unknown> = {};
       if (options) {
         if (options.cursor) params.cursor = options.cursor;
         if (options.limit) params.limit = options.limit;
@@ -321,7 +321,7 @@ export class BrexClient {
     }
   }
 
-  async getTransaction(transactionId: string): Promise<BrexTransaction> {
+  async getTransaction(_transactionId: string): Promise<BrexTransaction> {
     try {
       // This is a fallback implementation since we couldn't find a direct transaction endpoint
       throw new Error('Individual transaction endpoint not available');
@@ -350,8 +350,32 @@ export class BrexClient {
   async getExpenses(params?: ListExpensesParams): Promise<ExpensesResponse> {
     try {
       logDebug('Fetching expenses from Brex API');
-      const response = await this.client.get('/v1/expenses', { params });
-      return response.data;
+      const query: Record<string, unknown> = {};
+      if (params) {
+        if (params.expand) query['expand[]'] = params.expand;
+        if (params.user_id) query['user_id[]'] = params.user_id;
+        if (params.parent_expense_id) query['parent_expense_id[]'] = params.parent_expense_id;
+        if (params.budget_id) query['budget_id[]'] = params.budget_id;
+        if (params.spending_entity_id) query['spending_entity_id[]'] = params.spending_entity_id;
+        if (params.expense_type) query['expense_type[]'] = params.expense_type;
+        if (params.status) query['status[]'] = params.status;
+        if (params.payment_status) query['payment_status[]'] = params.payment_status;
+        if (params.purchased_at_start) query.purchased_at_start = params.purchased_at_start;
+        if (params.purchased_at_end) query.purchased_at_end = params.purchased_at_end;
+        if (params.updated_at_start) query.updated_at_start = params.updated_at_start;
+        if (params.updated_at_end) query.updated_at_end = params.updated_at_end;
+        if (params.load_custom_fields !== undefined) query.load_custom_fields = params.load_custom_fields;
+        if (params.cursor) query.cursor = params.cursor;
+        if (params.limit) query.limit = params.limit;
+      }
+      const response = await this.client.get('/v1/expenses', { params: query });
+      const data = (response.data || {}) as { items?: unknown[]; next_cursor?: string };
+      const normalized = {
+        items: Array.isArray(data.items) ? data.items : [],
+        nextCursor: data.next_cursor || '',
+        hasMore: Boolean(data.next_cursor)
+      } as ExpensesResponse;
+      return normalized;
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
         throw new Error(`Brex API authentication failed: Please check your API key in the .env file`);
@@ -380,30 +404,41 @@ export class BrexClient {
     try {
       logDebug('Fetching card expenses from Brex API');
       try {
-        // Add merchant expansion by default if not already specified
-        const expandedParams = { ...params };
+        // Build query with correct bracketed array keys
+        const expandedParams: ListExpensesParams = { ...(params || {}) };
         if (!expandedParams.expand) {
           expandedParams.expand = ['merchant'];
         } else if (Array.isArray(expandedParams.expand) && !expandedParams.expand.includes('merchant')) {
           expandedParams.expand.push('merchant');
         }
+        const query: Record<string, unknown> = {};
+        if (expandedParams.expand) query['expand[]'] = expandedParams.expand;
+        if (expandedParams.user_id) query['user_id[]'] = expandedParams.user_id;
+        if (expandedParams.parent_expense_id) query['parent_expense_id[]'] = expandedParams.parent_expense_id;
+        if (expandedParams.budget_id) query['budget_id[]'] = expandedParams.budget_id;
+        if (expandedParams.spending_entity_id) query['spending_entity_id[]'] = expandedParams.spending_entity_id;
+        // Do NOT send expense_type to /card endpoint; filter is implied
+        if (expandedParams.status) query['status[]'] = expandedParams.status;
+        if (expandedParams.payment_status) query['payment_status[]'] = expandedParams.payment_status;
+        if (expandedParams.purchased_at_start) query.purchased_at_start = expandedParams.purchased_at_start;
+        if (expandedParams.purchased_at_end) query.purchased_at_end = expandedParams.purchased_at_end;
+        if (expandedParams.updated_at_start) query.updated_at_start = expandedParams.updated_at_start;
+        if (expandedParams.updated_at_end) query.updated_at_end = expandedParams.updated_at_end;
+        if (expandedParams.load_custom_fields !== undefined) query.load_custom_fields = expandedParams.load_custom_fields;
+        if (expandedParams.cursor) query.cursor = expandedParams.cursor;
+        if (expandedParams.limit) query.limit = expandedParams.limit;
 
-        const response = await this.client.get('/v1/expenses/card', { params: expandedParams });
-        
-        // Add error handling for malformed responses
-        if (!response.data || !Array.isArray(response.data.items)) {
+        const response = await this.client.get('/v1/expenses/card', { params: query });
+        const data = (response.data || {}) as { items?: unknown[]; next_cursor?: string };
+        if (!data || !Array.isArray(data.items)) {
           logWarn('Unexpected response format from Brex Card Expenses API');
-          // Create a valid response structure even if the API returns unexpected format
-          return {
-            items: Array.isArray(response.data) ? response.data : 
-                  (response.data && typeof response.data === 'object' && 'items' in response.data) ? 
-                  response.data.items : [],
-            nextCursor: '',
-            hasMore: false
-          };
         }
-        
-        return response.data;
+        const normalized = {
+          items: Array.isArray(data.items) ? data.items : [],
+          nextCursor: data.next_cursor || '',
+          hasMore: Boolean(data.next_cursor)
+        } as ExpensesResponse;
+        return normalized;
       } catch (apiError) {
         logError(`Brex Card Expenses API error: ${apiError instanceof Error ? apiError.message : String(apiError)}`);
         // Return empty but valid response
@@ -783,7 +818,7 @@ export class BrexClient {
    * @param params Optional query parameters
    * @returns Response data
    */
-  async get(endpoint: string, params?: Record<string, any>): Promise<any> {
+  async get(endpoint: string, params?: Record<string, unknown>): Promise<unknown> {
     try {
       logDebug(`Making GET request to Brex API endpoint: ${endpoint}`, { params });
       const response = await this.client.get(endpoint, { params });
@@ -801,7 +836,7 @@ export class BrexClient {
    * @param params Optional query parameters
    * @returns Response data
    */
-  async post(endpoint: string, data: any, params?: Record<string, any>): Promise<any> {
+  async post(endpoint: string, data: unknown, params?: Record<string, unknown>): Promise<unknown> {
     try {
       logDebug(`Making POST request to Brex API endpoint: ${endpoint}`, { params });
       const response = await this.client.post(endpoint, data, { params });
@@ -819,7 +854,7 @@ export class BrexClient {
    * @param params Optional query parameters
    * @returns Response data
    */
-  async put(endpoint: string, data: any, params?: Record<string, any>): Promise<any> {
+  async put(endpoint: string, data: unknown, params?: Record<string, unknown>): Promise<unknown> {
     try {
       logDebug(`Making PUT request to Brex API endpoint: ${endpoint}`, { params });
       const response = await this.client.put(endpoint, data, { params });
@@ -836,7 +871,7 @@ export class BrexClient {
    * @param method HTTP method used
    * @param endpoint API endpoint path
    */
-  private handleApiError(error: any, method: string, endpoint: string): void {
+  private handleApiError(error: unknown, method: string, endpoint: string): void {
     if (axios.isAxiosError(error)) {
       if (error.response?.status === 401) {
         logError(`Brex API authentication failed: Please check your API key in the .env file`, {

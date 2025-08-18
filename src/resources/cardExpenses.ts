@@ -11,8 +11,6 @@ import { logDebug, logError } from "../utils/logger.js";
 import { BrexClient } from "../services/brex/client.js";
 import { 
   ListExpensesParams, 
-  ExpenseType, 
-  ExpenseStatus,
   Expense
 } from "../services/brex/expenses-types.js";
 
@@ -29,52 +27,11 @@ const cardExpensesTemplate = new ResourceTemplate("brex://expenses/card{/id}");
  * @param obj The object to check
  * @returns true if the object appears to be a valid expense
  */
-function isCardExpense(obj: any): obj is Expense {
-  return obj && 
-    typeof obj === 'object' && 
-    'id' in obj;
+function isCardExpense(obj: unknown): obj is Expense {
+  return typeof obj === 'object' && obj !== null && 'id' in obj;
 }
 
-/**
- * Normalize card expense data to ensure required fields are present
- */
-function normalizeCardExpense(expense: any, id?: string): any {
-  // Create a copy to avoid modifying the original
-  const normalizedExpense = { ...expense };
-  
-  // Ensure required fields
-  if (!normalizedExpense.id) normalizedExpense.id = id || "unknown-" + Math.random().toString(36).substring(2, 9);
-  if (!normalizedExpense.updated_at) normalizedExpense.updated_at = new Date().toISOString();
-  if (!normalizedExpense.status) normalizedExpense.status = ExpenseStatus.SUBMITTED; // Default status
-  
-  // Format merchant information
-  if (normalizedExpense.merchant) {
-    if (typeof normalizedExpense.merchant === 'object') {
-      const merchantName = normalizedExpense.merchant.raw_descriptor || 'Unknown Merchant';
-      (normalizedExpense as any).merchant_name = merchantName;
-      
-      if (!normalizedExpense.merchant.raw_descriptor) {
-        (normalizedExpense.merchant as any).raw_descriptor = 'Unknown';
-      }
-    }
-  } else if (normalizedExpense.merchant_id) {
-    normalizedExpense.merchant = {
-      raw_descriptor: 'Merchant ID: ' + normalizedExpense.merchant_id,
-      id: normalizedExpense.merchant_id
-    };
-    (normalizedExpense as any).merchant_name = 'Merchant ID: ' + normalizedExpense.merchant_id;
-  }
-  
-  // Format budget information
-  if (normalizedExpense.budget_id && !normalizedExpense.budget) {
-    normalizedExpense.budget = {
-      id: normalizedExpense.budget_id,
-      name: 'Budget ID: ' + normalizedExpense.budget_id
-    };
-  }
-  
-  return normalizedExpense;
-}
+// normalizeCardExpense helper intentionally removed as unused
 
 /**
  * Registers the card expenses resource handler with the server
@@ -91,7 +48,7 @@ export function registerCardExpensesResource(server: Server): void {
   });
 
   // Use the standard approach with setRequestHandler
-  server.setRequestHandler(ReadResourceRequestSchema, async (request, extra) => {
+  server.setRequestHandler(ReadResourceRequestSchema, async (request, _extra) => {
     const uri = request.params.uri;
     
     // Check if this handler should process this URI
@@ -112,7 +69,7 @@ export function registerCardExpensesResource(server: Server): void {
       try {
         logDebug("Fetching all card expenses from Brex API");
         const listParams: ListExpensesParams = {
-          expense_type: [ExpenseType.CARD],
+          // expense_type not needed for /card endpoint
           limit: 50,
           expand: ['merchant', 'budget'] // Always expand merchant and budget information
         };
