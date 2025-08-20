@@ -7,7 +7,7 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { BrexClient } from "../services/brex/client.js";
 import { logDebug, logError } from "../utils/logger.js";
-import { registerToolHandler } from "./index.js";
+import { registerToolHandler, ToolCallRequest } from "./index.js";
 
 // Get Brex client
 function getBrexClient(): BrexClient {
@@ -100,8 +100,8 @@ function validateParams(input: any): UploadReceiptParams {
  * Registers the upload_receipt tool with the server
  * @param server The MCP server instance
  */
-export function registerUploadReceipt(server: Server): void {
-  registerToolHandler("upload_receipt", async (request) => {
+export function registerUploadReceipt(_server: Server): void {
+  registerToolHandler("upload_receipt", async (request: ToolCallRequest) => {
     try {
       // Validate parameters
       const params = validateParams(request.params.arguments);

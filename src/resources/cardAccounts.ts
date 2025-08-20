@@ -10,6 +10,8 @@ import { ResourceTemplate } from "../models/resourceTemplate.js";
 import { logDebug, logError } from "../utils/logger.js";
 import { BrexClient } from "../services/brex/client.js";
 import { isCardAccount, isStatement } from "../services/brex/transactions-types.js";
+import { parseQueryParams } from "../models/common.js";
+import { estimateTokens } from "../utils/responseLimiter.js";
 
 // Get Brex client
 function getBrexClient(): BrexClient {
@@ -18,7 +20,7 @@ function getBrexClient(): BrexClient {
 
 // Define card accounts resource template
 const cardAccountsTemplate = new ResourceTemplate("brex://accounts/card{/id}");
-const cardStatementsTemplate = new ResourceTemplate("brex://accounts/card/primary/statements");
+// const cardStatementsTemplate = new ResourceTemplate("brex://accounts/card/primary/statements");
 
 /**
  * Registers the card accounts resource handler with the server
@@ -39,7 +41,7 @@ export function registerCardAccountsResource(server: Server): void {
   });
 
   // Use the standard approach with setRequestHandler
-  server.setRequestHandler(ReadResourceRequestSchema, async (request, extra) => {
+  server.setRequestHandler(ReadResourceRequestSchema, async (request, _extra) => {
     const uri = request.params.uri;
     
     // Check if this handler should process this URI
@@ -55,9 +57,9 @@ export function registerCardAccountsResource(server: Server): void {
     // Handle card account primary statements endpoint
     if (uri.includes("primary/statements")) {
       // Extract cursor and limit from query parameters
-      const url = new URL(uri);
-      const cursor = url.searchParams.get("cursor") || undefined;
-      const limit = url.searchParams.get("limit") ? parseInt(url.searchParams.get("limit") as string, 10) : undefined;
+      const qp = parseQueryParams(uri);
+      const cursor = qp.cursor || undefined;
+      const limit = qp.limit ? parseInt(qp.limit, 10) : undefined;
       
       try {
         logDebug("Fetching primary card account statements from Brex API");
@@ -77,13 +79,20 @@ export function registerCardAccountsResource(server: Server): void {
         
         logDebug(`Successfully fetched ${statements.items.length} primary card statements`);
         
+        // Projection/limiting
+        const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+        const summaryOnly = qp.summary_only === 'true';
+        const tooBig = estimateTokens(JSON.stringify(statements.items)) > 24000;
+        const summarized = summaryOnly || tooBig;
+        const projected = summarized && fields && fields.length ? statements.items.map(t => project(t, fields)) : (summarized ? statements.items.map(t => project(t, DEFAULT_STMT_FIELDS)) : statements.items);
         // Format response with pagination information
         const result = {
-          items: statements.items,
+          items: projected,
           pagination: {
-            hasMore: !!statements.next_cursor,
-            nextCursor: statements.next_cursor
-          }
+            hasMore: !!(statements as any).next_cursor,
+            nextCursor: (statements as any).next_cursor
+          },
+          meta: { summary_applied: summarized }
         };
         
         return {
@@ -122,13 +131,14 @@ export function registerCardAccountsResource(server: Server): void {
         
         logDebug(`Successfully fetched ${accounts.length} card accounts`);
         
-        return {
-          contents: [{
-            uri: uri,
-            mimeType: "application/json",
-            text: JSON.stringify(accounts, null, 2)
-          }]
-        };
+        // Projection/limiting for accounts list (rarely large, but keep consistent)
+        const qp = parseQueryParams(uri);
+        const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+        const summaryOnly = qp.summary_only === 'true';
+        const tooBig = estimateTokens(JSON.stringify(accounts)) > 24000;
+        const summarized = summaryOnly || tooBig;
+        const projected = summarized && fields && fields.length ? accounts.map((a: any) => project(a, fields)) : accounts;
+        return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(projected, null, 2) }] };
       } catch (error) {
         logError(`Failed to fetch card accounts: ${error instanceof Error ? error.message : String(error)}`);
         throw error;
@@ -145,3 +155,26 @@ export function registerCardAccountsResource(server: Server): void {
     }
   });
 } 
+
+const DEFAULT_STMT_FIELDS = [
+  'id',
+  'period_start',
+  'period_end',
+  'total_amount.amount',
+  'total_amount.currency'
+];
+
+function project(src: any, fields: string[]): any {
+  const out: any = {};
+  for (const f of fields) {
+    const parts = f.split('.');
+    let cur: any = src;
+    for (const p of parts) { cur = cur?.[p]; if (cur === undefined) break; }
+    if (cur !== undefined) {
+      let o: any = out;
+      for (let i = 0; i < parts.length - 1; i++) { o[parts[i]] = o[parts[i]] ?? {}; o = o[parts[i]]; }
+      o[parts[parts.length - 1]] = cur;
+    }
+  }
+  return out;
+}

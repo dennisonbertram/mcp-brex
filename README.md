@@ -152,6 +152,16 @@ npm run test
 
 Since MCP servers communicate over stdio, debugging can be challenging. We recommend using the [MCP Inspector](https://github.com/modelcontextprotocol/inspector) for debugging.
 
+## Usage Guide Resource
+
+Agents can read a compact usage guide via MCP resources:
+
+- `brex://docs/usage` — best practices, safe parameter patterns, and anti-patterns to avoid over-fetching.
+
+## Publishing
+
+This package publishes only `build`, `README.md`, and `LICENSE`. Development scripts and internal documentation are excluded from npm.
+
 ## Security Considerations
 
 This server implements several security measures:

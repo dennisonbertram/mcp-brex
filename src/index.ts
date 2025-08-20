@@ -49,7 +49,7 @@ registerTools(server);
 registerPrompts(server);
 
 // Start the server
-async function main() {
+async function main(): Promise<void> {
   try {
     logInfo("===== SERVER STARTUP BEGIN =====");
     logInfo("Starting Brex MCP server...");

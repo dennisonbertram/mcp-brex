@@ -10,6 +10,8 @@ import { ResourceTemplate } from "../models/resourceTemplate.js";
 import { logDebug, logError } from "../utils/logger.js";
 import { BrexClient } from "../services/brex/client.js";
 import { isCardTransaction, isCashTransaction } from "../services/brex/transactions-types.js";
+import { parseQueryParams } from "../models/common.js";
+import { estimateTokens } from "../utils/responseLimiter.js";
 
 // Get Brex client
 function getBrexClient(): BrexClient {
@@ -17,7 +19,6 @@ function getBrexClient(): BrexClient {
 }
 
 // Define resource templates
-const cardTransactionsTemplate = new ResourceTemplate("brex://transactions/card/primary");
 const cashTransactionsTemplate = new ResourceTemplate("brex://transactions/cash/{id}");
 
 /**
@@ -39,7 +40,7 @@ export function registerTransactionsResource(server: Server): void {
   });
 
   // Use the standard approach with setRequestHandler
-  server.setRequestHandler(ReadResourceRequestSchema, async (request, extra) => {
+  server.setRequestHandler(ReadResourceRequestSchema, async (request, _extra) => {
     const uri = request.params.uri;
     
     // Check if this handler should process this URI
@@ -55,13 +56,13 @@ export function registerTransactionsResource(server: Server): void {
     // Handle card transactions
     if (uri.includes("transactions/card/primary")) {
       // Extract query parameters
-      const url = new URL(uri);
+      const qp = parseQueryParams(uri);
       const options = {
-        cursor: url.searchParams.get("cursor") || undefined,
-        limit: url.searchParams.get("limit") ? parseInt(url.searchParams.get("limit") as string, 10) : undefined,
-        posted_at_start: url.searchParams.get("posted_at_start") || undefined,
-        user_ids: url.searchParams.getAll("user_id") || undefined,
-        expand: url.searchParams.getAll("expand") || undefined
+        cursor: qp.cursor || undefined,
+        limit: qp.limit ? parseInt(qp.limit, 10) : undefined,
+        posted_at_start: qp.posted_at_start || undefined,
+        user_ids: qp.user_id ? [qp.user_id] : undefined,
+        expand: qp.expand ? [qp.expand] : undefined
       };
       
       try {
@@ -82,13 +83,20 @@ export function registerTransactionsResource(server: Server): void {
         
         logDebug(`Successfully fetched ${transactions.items.length} card transactions`);
         
+        // Projection/limiting
+        const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+        const summaryOnly = qp.summary_only === 'true';
+        const tooBig = estimateTokens(JSON.stringify(transactions.items)) > 24000;
+        const summarized = summaryOnly || tooBig;
+        const projected = summarized && fields && fields.length ? transactions.items.map(t => project(t, fields)) : (summarized ? transactions.items.map(t => project(t, DEFAULT_TX_FIELDS)) : transactions.items);
         // Format response with pagination information
         const result = {
-          items: transactions.items,
+          items: projected,
           pagination: {
-            hasMore: !!transactions.next_cursor,
-            nextCursor: transactions.next_cursor
-          }
+            hasMore: !!(transactions as any).next_cursor,
+            nextCursor: (transactions as any).next_cursor
+          },
+          meta: { summary_applied: summarized }
         };
         
         return {
@@ -118,11 +126,11 @@ export function registerTransactionsResource(server: Server): void {
       }
       
       // Extract query parameters
-      const url = new URL(uri);
+      const qp = parseQueryParams(uri);
       const options = {
-        cursor: url.searchParams.get("cursor") || undefined,
-        limit: url.searchParams.get("limit") ? parseInt(url.searchParams.get("limit") as string, 10) : undefined,
-        posted_at_start: url.searchParams.get("posted_at_start") || undefined
+        cursor: qp.cursor || undefined,
+        limit: qp.limit ? parseInt(qp.limit, 10) : undefined,
+        posted_at_start: qp.posted_at_start || undefined
       };
       
       try {
@@ -143,13 +151,20 @@ export function registerTransactionsResource(server: Server): void {
         
         logDebug(`Successfully fetched ${transactions.items.length} cash transactions for account ${params.id}`);
         
+        // Projection/limiting
+        const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+        const summaryOnly = qp.summary_only === 'true';
+        const tooBig = estimateTokens(JSON.stringify(transactions.items)) > 24000;
+        const summarized = summaryOnly || tooBig;
+        const projected = summarized && fields && fields.length ? transactions.items.map(t => project(t, fields)) : (summarized ? transactions.items.map(t => project(t, DEFAULT_CASH_TX_FIELDS)) : transactions.items);
         // Format response with pagination information
         const result = {
-          items: transactions.items,
+          items: projected,
           pagination: {
-            hasMore: !!transactions.next_cursor,
-            nextCursor: transactions.next_cursor
-          }
+            hasMore: !!(transactions as any).next_cursor,
+            nextCursor: (transactions as any).next_cursor
+          },
+          meta: { summary_applied: summarized }
         };
         
         return {
@@ -174,3 +189,35 @@ export function registerTransactionsResource(server: Server): void {
     };
   });
 } 
+
+const DEFAULT_TX_FIELDS = [
+  'id',
+  'posted_at',
+  'status',
+  'amount.amount',
+  'amount.currency',
+  'merchant.raw_descriptor'
+];
+
+const DEFAULT_CASH_TX_FIELDS = [
+  'id',
+  'posted_at',
+  'amount.amount',
+  'amount.currency',
+  'description'
+];
+
+function project(src: any, fields: string[]): any {
+  const out: any = {};
+  for (const f of fields) {
+    const parts = f.split('.');
+    let cur: any = src;
+    for (const p of parts) { cur = cur?.[p]; if (cur === undefined) break; }
+    if (cur !== undefined) {
+      let o: any = out;
+      for (let i = 0; i < parts.length - 1; i++) { o[parts[i]] = o[parts[i]] ?? {}; o = o[parts[i]]; }
+      o[parts[parts.length - 1]] = cur;
+    }
+  }
+  return out;
+}

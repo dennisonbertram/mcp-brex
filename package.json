@@ -1,6 +1,6 @@
 {
   "name": "brex-mcp-server",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "MCP Server for Brex API Integration",
   "main": "build/index.js",
   "type": "module",
@@ -41,5 +41,10 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/dennisonbertram/brex-mcp-server.git"
-  }
+  },
+  "files": [
+    "build/**/*",
+    "README.md",
+    "LICENSE"
+  ]
 }

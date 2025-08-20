@@ -8,7 +8,7 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { BrexClient } from "../services/brex/client.js";
 import { logDebug, logError } from "../utils/logger.js";
 import { isBrexAccount } from "../services/brex/types.js";
-import { registerToolHandler } from "./index.js";
+import { registerToolHandler, ToolCallRequest } from "./index.js";
 
 // Get Brex client
 function getBrexClient(): BrexClient {
@@ -82,7 +82,8 @@ async function fetchAllAccounts(client: BrexClient, params: GetAllAccountsParams
   while (hasMore && allAccounts.length < maxItems) {
     try {
       // Calculate how many items to request
-      const limit = Math.min(pageSize, maxItems - allAccounts.length);
+      const _limit = Math.min(pageSize, maxItems - allAccounts.length);
+      void _limit;
       
       // Build request parameters - check if getAccounts accepts parameters
       // Based on error: "Expected 0 arguments, but got 1", we should not pass parameters
@@ -118,8 +119,8 @@ async function fetchAllAccounts(client: BrexClient, params: GetAllAccountsParams
  * Registers the get_all_accounts tool with the server
  * @param server The MCP server instance
  */
-export function registerGetAllAccounts(server: Server): void {
-  registerToolHandler("get_all_accounts", async (request) => {
+export function registerGetAllAccounts(_server: Server): void {
+  registerToolHandler("get_all_accounts", async (request: ToolCallRequest) => {
     try {
       // Validate parameters
       const params = validateParams(request.params.arguments);

@@ -24,22 +24,22 @@ const formatMessage = (level: LogLevel, message: string, context?: Record<string
 
 // Re-export the logger for consistent usage across the application
 export const logger = {
-  error: (message: string, context?: Record<string, unknown>) => {
+  error: (message: string, context?: Record<string, unknown>): void => {
     if (shouldLog('ERROR')) {
       process.stderr.write(formatMessage('ERROR', message, context));
     }
   },
-  warn: (message: string, context?: Record<string, unknown>) => {
+  warn: (message: string, context?: Record<string, unknown>): void => {
     if (shouldLog('WARN')) {
       process.stderr.write(formatMessage('WARN', message, context));
     }
   },
-  info: (message: string, context?: Record<string, unknown>) => {
+  info: (message: string, context?: Record<string, unknown>): void => {
     if (shouldLog('INFO')) {
       process.stderr.write(formatMessage('INFO', message, context));
     }
   },
-  debug: (message: string, context?: Record<string, unknown>) => {
+  debug: (message: string, context?: Record<string, unknown>): void => {
     if (shouldLog('DEBUG')) {
       process.stderr.write(formatMessage('DEBUG', message, context));
     }

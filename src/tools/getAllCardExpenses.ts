@@ -14,7 +14,8 @@ import {
   ListExpensesParams,
   isExpense 
 } from "../services/brex/expenses-types.js";
-import { registerToolHandler } from "./index.js";
+import { registerToolHandler, ToolCallRequest } from "./index.js";
+import { limitExpensesPayload } from "../utils/responseLimiter.js";
 
 // Get Brex client
 function getBrexClient(): BrexClient {
@@ -32,6 +33,11 @@ interface GetAllCardExpensesParams {
   start_date?: string;
   end_date?: string;
   merchant_name?: string;
+  summary_only?: boolean;
+  fields?: string[];
+  min_amount?: number;
+  max_amount?: number;
+  window_days?: number;
 }
 
 /**
@@ -130,6 +136,26 @@ function validateParams(input: unknown): GetAllCardExpensesParams {
     }
     params.merchant_name = String(raw.merchant_name).trim();
   }
+  // Amount thresholds
+  if (raw.min_amount !== undefined) {
+    const n = parseFloat(String(raw.min_amount));
+    if (isNaN(n) || n < 0) throw new Error("Invalid min_amount: must be non-negative");
+    params.min_amount = n;
+  }
+  if (raw.max_amount !== undefined) {
+    const n = parseFloat(String(raw.max_amount));
+    if (isNaN(n) || n < 0) throw new Error("Invalid max_amount: must be non-negative");
+    params.max_amount = n;
+  }
+  if (params.min_amount !== undefined && params.max_amount !== undefined && params.min_amount > params.max_amount) {
+    throw new Error("min_amount cannot be greater than max_amount");
+  }
+  // Optional batching window size (days)
+  if (raw.window_days !== undefined) {
+    const d = parseInt(String(raw.window_days), 10);
+    if (isNaN(d) || d <= 0) throw new Error("Invalid window_days: must be a positive integer");
+    params.window_days = d;
+  }
   
   return params;
 }
@@ -143,75 +169,64 @@ function validateParams(input: unknown): GetAllCardExpensesParams {
 async function fetchAllCardExpenses(client: BrexClient, params: GetAllCardExpensesParams): Promise<unknown[]> {
   const pageSize = params.page_size || 50;
   const maxItems = params.max_items || Infinity;
-  let cursor: string | undefined = undefined;
   let allExpenses: unknown[] = [];
-  let hasMore = true;
-  
-  while (hasMore && allExpenses.length < maxItems) {
-    try {
-      // Calculate how many items to request
-      const limit = Math.min(pageSize, maxItems - allExpenses.length);
-      
-      // Build request parameters - always set expense_type to CARD
-      const requestParams: ListExpensesParams = {
-        limit,
-        cursor,
-        expense_type: [ExpenseType.CARD],
-        expand: ['merchant', 'budget'] // Always expand merchant and budget information
-      };
-      
-      // Add filters if provided
-      if (params.status) {
-        requestParams.status = params.status;
-      }
-      
-      if (params.payment_status) {
-        requestParams.payment_status = params.payment_status;
-      }
-      
-      // Use updated_at_start instead of created_at_start (which doesn't exist)
-      if (params.start_date) {
-        requestParams.updated_at_start = params.start_date;
-      }
-      
-      // End date filter (server-side)
-      if (params.end_date) {
-        requestParams.updated_at_end = params.end_date;
-      }
-      
-      // Fetch page of card expenses
-      logDebug(`Fetching card expenses page with cursor: ${cursor || 'initial'}`);
-      const response = await client.getCardExpenses(requestParams);
-      
-      // Filter valid expenses
-      let validExpenses = response.items.filter(isExpense);
-      
-      // Apply merchant name filter if provided (client-side filtering)
-      if (params.merchant_name) {
-        const merchantNameLower = params.merchant_name.toLowerCase();
-        validExpenses = validExpenses.filter(expense => {
-          const merchantName = expense.merchant?.raw_descriptor || '';
-          return merchantName.toLowerCase().includes(merchantNameLower);
-        });
-      }
-      
-      // No additional client-side end_date filtering needed when using updated_at_end
-      
-      allExpenses = allExpenses.concat(validExpenses);
-      
-      logDebug(`Retrieved ${validExpenses.length} card expenses (total: ${allExpenses.length})`);
-      
-      // Check if we should continue pagination
-      // Use camelCase property as per error: "Property 'next_cursor' does not exist. Did you mean 'nextCursor'?"
-      cursor = response.nextCursor;
-      hasMore = !!cursor;
-      
-    } catch (error) {
-      logError(`Error fetching card expenses page: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
+  const start = params.start_date ? new Date(params.start_date) : undefined;
+  const end = params.end_date ? new Date(params.end_date) : undefined;
+  const windowDays = params.window_days && start && end ? params.window_days : undefined;
+  const windows: Array<{ start?: string; end?: string }> = [];
+  if (windowDays && start && end) {
+    const cursorStart = new Date(start);
+    while (cursorStart <= end && allExpenses.length < maxItems) {
+      const cursorEnd = new Date(cursorStart);
+      cursorEnd.setUTCDate(cursorEnd.getUTCDate() + windowDays);
+      if (cursorEnd > end) cursorEnd.setTime(end.getTime());
+      windows.push({ start: cursorStart.toISOString(), end: cursorEnd.toISOString() });
+      cursorStart.setUTCDate(cursorStart.getUTCDate() + windowDays);
     }
+  } else {
+    windows.push({ start: params.start_date, end: params.end_date });
   }
-  
+  for (const w of windows) {
+    let cursor: string | undefined = undefined;
+    let hasMore = true;
+    while (hasMore && allExpenses.length < maxItems) {
+      try {
+        const limit = Math.min(pageSize, maxItems - allExpenses.length);
+        const requestParams: ListExpensesParams = {
+          limit,
+          cursor,
+          expense_type: [ExpenseType.CARD],
+          expand: ['merchant', 'budget']
+        };
+        if (params.status) requestParams.status = params.status;
+        if (params.payment_status) requestParams.payment_status = params.payment_status;
+        if (w.start) requestParams.updated_at_start = w.start;
+        if (w.end) requestParams.updated_at_end = w.end;
+        
+        logDebug(`Fetching card expenses page (window ${w.start || 'none'}..${w.end || 'none'}) cursor: ${cursor || 'initial'}`);
+        const response = await client.getCardExpenses(requestParams);
+        let validExpenses = response.items.filter(isExpense);
+        if (params.merchant_name) {
+          const merchantNameLower = params.merchant_name.toLowerCase();
+          validExpenses = validExpenses.filter(expense => (expense.merchant?.raw_descriptor || '').toLowerCase().includes(merchantNameLower));
+        }
+        if (params.min_amount !== undefined) {
+          validExpenses = validExpenses.filter(e => typeof e.purchased_amount?.amount === 'number' && e.purchased_amount.amount >= (params.min_amount as number));
+        }
+        if (params.max_amount !== undefined) {
+          validExpenses = validExpenses.filter(e => typeof e.purchased_amount?.amount === 'number' && e.purchased_amount.amount <= (params.max_amount as number));
+        }
+        allExpenses = allExpenses.concat(validExpenses);
+        logDebug(`Retrieved ${validExpenses.length} card expenses (total: ${allExpenses.length})`);
+        cursor = response.nextCursor;
+        hasMore = !!cursor;
+      } catch (error) {
+        logError(`Error fetching card expenses page: ${error instanceof Error ? error.message : String(error)}`);
+        throw error;
+      }
+    }
+    if (allExpenses.length >= maxItems) break;
+  }
   return allExpenses;
 }
 
@@ -220,7 +235,7 @@ async function fetchAllCardExpenses(client: BrexClient, params: GetAllCardExpens
  * @param server The MCP server instance
  */
 export function registerGetAllCardExpenses(_server: Server): void {
-  registerToolHandler("get_all_card_expenses", async (request) => {
+  registerToolHandler("get_all_card_expenses", async (request: ToolCallRequest) => {
     try {
       // Validate parameters
       const params = validateParams(request.params.arguments);
@@ -232,15 +247,21 @@ export function registerGetAllCardExpenses(_server: Server): void {
       try {
         // Fetch all card expenses with pagination
         const allCardExpenses = await fetchAllCardExpenses(brexClient, params);
+        const { items, summaryApplied } = limitExpensesPayload(allCardExpenses as any, {
+          summaryOnly: params.summary_only,
+          fields: params.fields,
+          hardTokenLimit: 24000
+        });
         
         logDebug(`Successfully fetched ${allCardExpenses.length} total card expenses`);
         
         // Add helpful metadata about the request
         const result = {
-          card_expenses: allCardExpenses,
+          card_expenses: items,
           meta: {
-            total_count: allCardExpenses.length,
-            requested_parameters: params
+            total_count: items.length,
+            requested_parameters: params,
+            summary_applied: summaryApplied
           }
         };
         

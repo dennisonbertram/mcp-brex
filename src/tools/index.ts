@@ -15,11 +15,26 @@ import { registerUpdateExpense } from "./updateExpense.js";
 import { registerGetAllAccounts } from "./getAllAccounts.js";
 import { registerGetAllExpenses } from "./getAllExpenses.js";
 import { registerGetAllCardExpenses } from "./getAllCardExpenses.js";
+import { registerGetCardTransactions } from "./getCardTransactions.js";
+import { registerGetCashAccountStatements } from "./getCashAccountStatements.js";
+import { registerGetExpenseById } from "./getExpenseById.js";
+import { registerGetCardExpenseById } from "./getCardExpenseById.js";
+import { registerGetCardStatementsPrimary } from "./getCardStatementsPrimary.js";
+import { registerGetCashTransactions } from "./getCashTransactions.js";
+import { registerGetBudgets } from "./getBudgets.js";
+import { registerGetBudgetById } from "./getBudgetById.js";
+import { registerGetSpendLimits } from "./getSpendLimits.js";
+import { registerGetSpendLimitById } from "./getSpendLimitById.js";
+import { registerGetBudgetPrograms } from "./getBudgetPrograms.js";
+import { registerGetBudgetProgramById } from "./getBudgetProgramById.js";
 import { logError } from "../utils/logger.js";
 import { ExpenseType, ExpenseStatus, ExpensePaymentStatus } from "../services/brex/expenses-types.js";
 
+// Minimal request shape passed to individual tool handlers
+export type ToolCallRequest = { params: { name?: string; arguments?: Record<string, unknown> } };
+
 // Store tool handlers
-const toolHandlers = new Map<string, (request: any) => Promise<any>>();
+const toolHandlers = new Map<string, (request: ToolCallRequest) => Promise<unknown>>();
 
 /**
  * Registers all tools with the server
@@ -38,6 +53,19 @@ export function registerTools(server: Server): void {
   registerGetAllAccounts(server);
   registerGetAllExpenses(server);
   registerGetAllCardExpenses(server);
+  registerGetCardTransactions(server);
+  registerGetCashAccountStatements(server);
+  registerGetExpenseById(server);
+  registerGetCardExpenseById(server);
+  registerGetCardStatementsPrimary(server);
+  registerGetCashTransactions(server);
+  // Read-only budget domain
+  registerGetBudgets(server);
+  registerGetBudgetById(server);
+  registerGetSpendLimits(server);
+  registerGetSpendLimitById(server);
+  registerGetBudgetPrograms(server);
+  registerGetBudgetProgramById(server);
 
   // Register the list tools handler
   registerListToolsHandler(server);
@@ -54,6 +82,178 @@ function registerListToolsHandler(server: Server): void {
   server.setRequestHandler(ListToolsRequestSchema, async () => {
     return {
       tools: [
+        {
+          name: "get_budgets",
+          description: "List budgets (read-only). Example: {\"limit\":10,\"summary_only\":true}",
+          inputSchema: {
+            type: "object",
+            properties: {
+              limit: { type: "number" },
+              cursor: { type: "string" },
+              parent_budget_id: { type: "string" },
+              spend_budget_status: { type: "string", enum: ["ACTIVE","ARCHIVED","DRAFT"] },
+              summary_only: { type: "boolean" },
+              fields: { type: "array", items: { type: "string" } }
+            }
+          }
+        },
+        {
+          name: "get_budget",
+          description: "Get a budget by ID (read-only). Example: {\"budget_id\":\"budget_123\",\"summary_only\":true}",
+          inputSchema: {
+            type: "object",
+            properties: {
+              budget_id: { type: "string" },
+              summary_only: { type: "boolean" },
+              fields: { type: "array", items: { type: "string" } }
+            },
+            required: ["budget_id"]
+          }
+        },
+        {
+          name: "get_spend_limits",
+          description: "List spend limits (read-only). Example: {\"limit\":10,\"status\":\"ACTIVE\",\"summary_only\":true}",
+          inputSchema: {
+            type: "object",
+            properties: {
+              limit: { type: "number" },
+              cursor: { type: "string" },
+              parent_budget_id: { type: "string" },
+              status: { type: "string", enum: ["ACTIVE","ARCHIVED"] },
+              member_user_id: { type: "string" },
+              summary_only: { type: "boolean" },
+              fields: { type: "array", items: { type: "string" } }
+            }
+          }
+        },
+        {
+          name: "get_spend_limit",
+          description: "Get a spend limit by ID (read-only). Example: {\"id\":\"sl_123\",\"summary_only\":true}",
+          inputSchema: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              summary_only: { type: "boolean" },
+              fields: { type: "array", items: { type: "string" } }
+            },
+            required: ["id"]
+          }
+        },
+        {
+          name: "get_budget_programs",
+          description: "List budget programs (read-only). Example: {\"limit\":10,\"budget_program_status\":\"ACTIVE\",\"summary_only\":true}",
+          inputSchema: {
+            type: "object",
+            properties: {
+              limit: { type: "number" },
+              cursor: { type: "string" },
+              budget_program_status: { type: "string", enum: ["ACTIVE","INACTIVE"] },
+              summary_only: { type: "boolean" },
+              fields: { type: "array", items: { type: "string" } }
+            }
+          }
+        },
+        {
+          name: "get_budget_program",
+          description: "Get a budget program by ID (read-only). Example: {\"id\":\"bp_123\",\"summary_only\":true}",
+          inputSchema: {
+            type: "object",
+            properties: {
+              id: { type: "string" },
+              summary_only: { type: "boolean" },
+              fields: { type: "array", items: { type: "string" } }
+            },
+            required: ["id"]
+          }
+        },
+        {
+          name: "get_expense",
+          description: "Get a single expense by ID. Example: {\"expense_id\":\"expense_123\",\"summary_only\":true,\"fields\":[\"id\",\"status\",\"merchant.raw_descriptor\"]}. Notes: Always include summary_only:true and a small fields list to minimize payload.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              expense_id: { type: "string", description: "Expense ID" },
+              expand: { type: "array", items: { type: "string" } },
+              summary_only: { type: "boolean" },
+              fields: { type: "array", items: { type: "string" } }
+            },
+            required: ["expense_id"]
+          }
+        },
+        {
+          name: "get_card_expense",
+          description: "Get a single card expense by ID. Example: {\"expense_id\":\"expense_123\",\"summary_only\":true,\"fields\":[\"id\",\"status\",\"merchant.raw_descriptor\"]}. Notes: Always include summary_only:true and fields.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              expense_id: { type: "string", description: "Card expense ID" },
+              expand: { type: "array", items: { type: "string" } },
+              summary_only: { type: "boolean" },
+              fields: { type: "array", items: { type: "string" } }
+            },
+            required: ["expense_id"]
+          }
+        },
+        {
+          name: "get_card_statements_primary",
+          description: "Get statements for the primary card account. Example: {\"limit\":5,\"summary_only\":true,\"fields\":[\"id\",\"period_start\",\"total_amount.amount\"]}",
+          inputSchema: {
+            type: "object",
+            properties: {
+              cursor: { type: "string" },
+              limit: { type: "number" },
+              summary_only: { type: "boolean" },
+              fields: { type: "array", items: { type: "string" } }
+            }
+          }
+        },
+        {
+          name: "get_cash_transactions",
+          description: "LIST: Cash transactions (requires cash scopes). Example: {\"account_id\":\"cash_acc_123\",\"limit\":10,\"summary_only\":true}. Notes: Requires cash scopes; always limit<=50 and use fields.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              account_id: { type: "string", description: "Cash account ID" },
+              cursor: { type: "string" },
+              limit: { type: "number" },
+              posted_at_start: { type: "string" },
+              summary_only: { type: "boolean" },
+              fields: { type: "array", items: { type: "string" } }
+            },
+            required: ["account_id"]
+          }
+        },
+        {
+          name: "get_card_transactions",
+          description: "LIST: Primary card transactions. Example: {\"limit\":10,\"posted_at_start\":\"2025-08-01T00:00:00Z\",\"summary_only\":true}. Notes: Always set limit<=50, include posted_at_start for recent window, and use fields to keep payload small.",
+          inputSchema: {
+            type: "object",
+            properties: {
+              cursor: { type: "string", description: "Pagination cursor" },
+              limit: { type: "number", description: "Items per page (default 50)" },
+              user_ids: { type: "array", items: { type: "string" }, description: "Optional filter by user IDs" },
+              posted_at_start: { type: "string", description: "ISO timestamp to start from" },
+              expand: { type: "array", items: { type: "string" }, description: "Fields to expand" },
+              summary_only: { type: "boolean", description: "Return summary fields only" },
+              fields: { type: "array", items: { type: "string" }, description: "Projection fields (dot-notation)" }
+            }
+          }
+        },
+        {
+          name: "get_cash_account_statements",
+          description: "Get cash account statements by account ID. Example: {\"account_id\":\"cash_acc_123\",\"limit\":5,\"summary_only\":true}",
+          inputSchema: {
+            type: "object",
+            properties: {
+              account_id: { type: "string", description: "Cash account ID" },
+              cursor: { type: "string", description: "Pagination cursor" },
+              limit: { type: "number", description: "Items per page (default 50)" },
+              summary_only: { type: "boolean", description: "Return summary fields only" },
+              fields: { type: "array", items: { type: "string" }, description: "Projection fields (dot-notation)" }
+            },
+            required: ["account_id"]
+          }
+        },
         {
           name: "get_transactions",
           description: "Get transactions for a Brex account",
@@ -74,7 +274,7 @@ function registerListToolsHandler(server: Server): void {
         },
         {
           name: "get_expenses",
-          description: "Get expenses from Brex",
+          description: "LIST (single page): Expenses with optional filters. Example: {\"limit\":5,\"status\":\"APPROVED\",\"summary_only\":true}. Notes: Prefer small limit (<=10) and always include summary_only/fields. For larger sets, use get_all_expenses with date windows.",
           inputSchema: {
             type: "object",
             properties: {
@@ -96,6 +296,15 @@ function registerListToolsHandler(server: Server): void {
               limit: {
                 type: "number",
                 description: "Maximum number of expenses to return (default: 50)"
+              },
+              summary_only: {
+                type: "boolean",
+                description: "Return summary fields only to reduce payload size"
+              },
+              fields: {
+                type: "array",
+                items: { type: "string" },
+                description: "Optional list of fields to include (dot-notation)"
               }
             }
           }
@@ -234,7 +443,7 @@ function registerListToolsHandler(server: Server): void {
         },
         {
           name: "get_all_expenses",
-          description: "Get all Brex expenses with pagination and filtering support",
+          description: "LIST: Paginated expenses with filters. Example: {\"page_size\":5,\"max_items\":5,\"status\":[\"APPROVED\"],\"summary_only\":true,\"window_days\":7,\"min_amount\":100}",
           inputSchema: {
             type: "object",
             properties: {
@@ -277,13 +486,34 @@ function registerListToolsHandler(server: Server): void {
               end_date: {
                 type: "string",
                 description: "Filter expenses created on or before this date (ISO format)"
+              },
+              window_days: {
+                type: "number",
+                description: "Optional batching window in days to split large date ranges"
+              },
+              min_amount: {
+                type: "number",
+                description: "Client-side minimum purchased_amount.amount filter"
+              },
+              max_amount: {
+                type: "number",
+                description: "Client-side maximum purchased_amount.amount filter"
+              },
+              summary_only: {
+                type: "boolean",
+                description: "Return summary fields only to reduce payload size"
+              },
+              fields: {
+                type: "array",
+                items: { type: "string" },
+                description: "Optional list of fields to include (dot-notation)"
               }
             }
           }
         },
         {
           name: "get_all_card_expenses",
-          description: "Get all Brex card expenses with pagination and filtering support",
+          description: "LIST: Paginated card expenses (no expense_type needed). Example: {\"page_size\":5,\"max_items\":5,\"summary_only\":true,\"window_days\":7,\"min_amount\":100}",
           inputSchema: {
             type: "object",
             properties: {
@@ -322,6 +552,27 @@ function registerListToolsHandler(server: Server): void {
               merchant_name: {
                 type: "string",
                 description: "Filter card expenses by merchant name (partial match)"
+              },
+              window_days: {
+                type: "number",
+                description: "Optional batching window in days to split large date ranges"
+              },
+              min_amount: {
+                type: "number",
+                description: "Client-side minimum purchased_amount.amount filter"
+              },
+              max_amount: {
+                type: "number",
+                description: "Client-side maximum purchased_amount.amount filter"
+              },
+              summary_only: {
+                type: "boolean",
+                description: "Return summary fields only to reduce payload size"
+              },
+              fields: {
+                type: "array",
+                items: { type: "string" },
+                description: "Optional list of fields to include (dot-notation)"
               }
             }
           }
@@ -342,7 +593,8 @@ function registerCallToolHandler(server: Server): void {
       if (!handler) {
         throw new Error(`Unknown tool: ${request.params.name}`);
       }
-      return await handler(request);
+      const result = await handler(request as unknown as ToolCallRequest);
+      return result as any;
     } catch (error) {
       logError(error as Error);
       throw error;
@@ -351,6 +603,6 @@ function registerCallToolHandler(server: Server): void {
 }
 
 // Helper function to register a tool handler
-export function registerToolHandler(name: string, handler: (request: any) => Promise<any>): void {
+export function registerToolHandler(name: string, handler: (request: ToolCallRequest) => Promise<unknown>): void {
   toolHandlers.set(name, handler);
 } 

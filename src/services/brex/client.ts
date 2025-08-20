@@ -334,7 +334,7 @@ export class BrexClient {
   }
 
   // User API
-  async getCurrentUser() {
+  async getCurrentUser(): Promise<any> {
     try {
       const response = await this.client.get('/v2/users/me');
       return response.data;

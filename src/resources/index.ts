@@ -5,7 +5,7 @@
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { ReadResourceRequestSchema, ListResourcesRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { ListResourcesRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { registerAccountsResource } from "./accounts.js";
 import { registerExpensesResource } from "./expenses.js";
 import { registerCardExpensesResource } from "./cardExpenses.js";
@@ -15,6 +15,8 @@ import { registerBudgetProgramsResource } from "./budgetPrograms.js";
 import { registerCardAccountsResource } from "./cardAccounts.js";
 import { registerCashAccountsResource } from "./cashAccounts.js";
 import { registerTransactionsResource } from "./transactions.js";
+import { registerResourcesRouter } from "./router.js";
+import { registerUsageResource } from "./usage.js";
 import { logInfo, logDebug, logError } from "../utils/logger.js";
 
 /**
@@ -32,6 +34,9 @@ export function registerResources(server: Server): void {
   registerCardAccountsResource(server);
   registerCashAccountsResource(server);
   registerTransactionsResource(server);
+  // Router last to ensure we return proper 'contents' arrays for expenses URIs
+  registerResourcesRouter(server);
+  registerUsageResource(server);
 
   // Register the list resources handler
   registerListResourcesHandler(server);
@@ -42,7 +47,7 @@ export function registerResources(server: Server): void {
  * @param server The MCP server instance
  */
 function registerListResourcesHandler(server: Server): void {
-  server.setRequestHandler(ListResourcesRequestSchema, async (request) => {
+  server.setRequestHandler(ListResourcesRequestSchema, async () => {
     try {
       logInfo("===== LIST RESOURCES START =====");
       logDebug("Request to list available Brex resources received");
@@ -109,6 +114,12 @@ function registerListResourcesHandler(server: Server): void {
           mimeType: "application/json",
           name: "Brex Budget Programs",
           description: "List of all Brex budget programs"
+        },
+        {
+          uri: "brex://docs/usage",
+          mimeType: "application/json",
+          name: "Brex MCP Usage Guide",
+          description: "Guidelines and examples for using the tools safely and efficiently"
         }
       ];
       

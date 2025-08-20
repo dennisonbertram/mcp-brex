@@ -34,7 +34,7 @@ export function registerAccountsResource(server: Server): void {
   });
 
   // Use the standard approach with setRequestHandler
-  server.setRequestHandler(ReadResourceRequestSchema, async (request, extra) => {
+  server.setRequestHandler(ReadResourceRequestSchema, async (request, _extra) => {
     const uri = request.params.uri;
     
     // Check if this handler should process this URI
