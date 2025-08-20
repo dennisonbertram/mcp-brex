@@ -5,7 +5,6 @@
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { CallToolRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { BrexClient } from "../services/brex/client.js";
 import { logDebug, logError } from "../utils/logger.js";
 import { 
@@ -15,7 +14,8 @@ import {
   ListExpensesParams,
   isExpense 
 } from "../services/brex/expenses-types.js";
-import { registerToolHandler } from "./index.js";
+import { registerToolHandler, ToolCallRequest } from "./index.js";
+import { limitExpensesPayload } from "../utils/responseLimiter.js";
 
 // Get Brex client
 function getBrexClient(): BrexClient {
@@ -30,6 +30,8 @@ interface GetExpensesParams {
   status?: ExpenseStatus;
   payment_status?: ExpensePaymentStatus;
   limit?: number;
+  summary_only?: boolean;
+  fields?: string[];
 }
 
 /**
@@ -84,8 +86,8 @@ function validateParams(input: any): GetExpensesParams {
  * Registers the get_expenses tool with the server
  * @param server The MCP server instance
  */
-export function registerGetExpenses(server: Server): void {
-  registerToolHandler("get_expenses", async (request) => {
+export function registerGetExpenses(_server: Server): void {
+  registerToolHandler("get_expenses", async (request: ToolCallRequest) => {
     try {
       // Validate parameters
       const params = validateParams(request.params.arguments);
@@ -124,14 +126,26 @@ export function registerGetExpenses(server: Server): void {
           throw new Error("Invalid response format from Brex API");
         }
         
-        // Filter valid expenses
+        // Filter valid expenses and apply payload limiter
         const validExpenses = expenses.items.filter(isExpense);
-        logDebug(`Found ${validExpenses.length} valid expenses out of ${expenses.items.length} total`);
-        
+        const { items, summaryApplied } = limitExpensesPayload(validExpenses as any, {
+          summaryOnly: params.summary_only,
+          fields: params.fields,
+          hardTokenLimit: 24000
+        });
+        logDebug(`Found ${validExpenses.length} valid expenses (returned: ${items.length}), summaryApplied=${summaryApplied}`);
+        const result = {
+          expenses: items,
+          meta: {
+            total_count: items.length,
+            requested_parameters: params,
+            summary_applied: summaryApplied
+          }
+        };
         return {
           content: [{
             type: "text",
-            text: JSON.stringify(validExpenses, null, 2)
+            text: JSON.stringify(result, null, 2)
           }]
         };
       } catch (apiError) {

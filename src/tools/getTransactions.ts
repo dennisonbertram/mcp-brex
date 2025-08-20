@@ -5,11 +5,11 @@
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { CallToolRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+// import { CallToolRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { BrexClient } from "../services/brex/client.js";
 import { logDebug, logError } from "../utils/logger.js";
 import { isBrexTransaction } from "../services/brex/types.js";
-import { registerToolHandler } from "./index.js";
+import { registerToolHandler, ToolCallRequest } from "./index.js";
 
 // Get Brex client
 function getBrexClient(): BrexClient {
@@ -29,22 +29,22 @@ interface GetTransactionsParams {
  * @param input The raw input parameters from the tool call
  * @returns Validated parameters
  */
-function validateParams(input: any): GetTransactionsParams {
+function validateParams(input: unknown): GetTransactionsParams {
   if (!input) {
     throw new Error("Missing parameters");
   }
-  
-  if (!input.accountId) {
+  const raw = input as Record<string, unknown>;
+  if (!raw.accountId) {
     throw new Error("Missing required parameter: accountId");
   }
   
   const params: GetTransactionsParams = {
-    accountId: input.accountId
+    accountId: String(raw.accountId)
   };
   
   // Add optional parameters if provided
-  if (input.limit !== undefined) {
-    const limit = parseInt(input.limit.toString(), 10);
+  if (raw.limit !== undefined) {
+    const limit = parseInt(String(raw.limit), 10);
     if (isNaN(limit) || limit <= 0) {
       throw new Error("Invalid limit: must be a positive number");
     }
@@ -58,8 +58,8 @@ function validateParams(input: any): GetTransactionsParams {
  * Registers the get_transactions tool with the server
  * @param server The MCP server instance
  */
-export function registerGetTransactions(server: Server): void {
-  registerToolHandler("get_transactions", async (request) => {
+export function registerGetTransactions(_server: Server): void {
+  registerToolHandler("get_transactions", async (request: ToolCallRequest) => {
     try {
       // Validate parameters
       const params = validateParams(request.params.arguments);
@@ -72,8 +72,8 @@ export function registerGetTransactions(server: Server): void {
       const limit = params.limit || 50;
       
       try {
-        // Call Brex API to get transactions
-        const transactions = await brexClient.getTransactions(params.accountId, JSON.stringify({ limit }));
+        // Call Brex API to get transactions (fallback via statements). Prefer get_cash_transactions.
+        const transactions = await brexClient.getTransactions(params.accountId, undefined, limit);
         
         // Validate transactions data
         if (!transactions || !Array.isArray(transactions.items)) {

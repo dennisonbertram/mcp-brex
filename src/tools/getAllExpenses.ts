@@ -14,7 +14,8 @@ import {
   ListExpensesParams,
   isExpense 
 } from "../services/brex/expenses-types.js";
-import { registerToolHandler } from "./index.js";
+import { registerToolHandler, ToolCallRequest } from "./index.js";
+import { limitExpensesPayload } from "../utils/responseLimiter.js";
 
 // Get Brex client
 function getBrexClient(): BrexClient {
@@ -32,6 +33,11 @@ interface GetAllExpensesParams {
   payment_status?: ExpensePaymentStatus[];
   start_date?: string;
   end_date?: string;
+  summary_only?: boolean;
+  fields?: string[];
+  min_amount?: number;
+  max_amount?: number;
+  window_days?: number;
 }
 
 /**
@@ -139,6 +145,28 @@ function validateParams(input: unknown): GetAllExpensesParams {
     }
   }
   
+  // Amount thresholds
+  if (raw.min_amount !== undefined) {
+    const n = parseFloat(String(raw.min_amount));
+    if (isNaN(n) || n < 0) throw new Error("Invalid min_amount: must be a non-negative number");
+    params.min_amount = n;
+  }
+  if (raw.max_amount !== undefined) {
+    const n = parseFloat(String(raw.max_amount));
+    if (isNaN(n) || n < 0) throw new Error("Invalid max_amount: must be a non-negative number");
+    params.max_amount = n;
+  }
+  if (params.min_amount !== undefined && params.max_amount !== undefined && params.min_amount > params.max_amount) {
+    throw new Error("min_amount cannot be greater than max_amount");
+  }
+  
+  // Optional batching window size (days)
+  if (raw.window_days !== undefined) {
+    const d = parseInt(String(raw.window_days), 10);
+    if (isNaN(d) || d <= 0) throw new Error("Invalid window_days: must be a positive integer");
+    params.window_days = d;
+  }
+  
   return params;
 }
 
@@ -151,75 +179,74 @@ function validateParams(input: unknown): GetAllExpensesParams {
 async function fetchAllExpenses(client: BrexClient, params: GetAllExpensesParams): Promise<unknown[]> {
   const pageSize = params.page_size || 50;
   const maxItems = params.max_items || Infinity;
-  let cursor: string | undefined = undefined;
   let allExpenses: unknown[] = [];
-  let hasMore = true;
   
-  while (hasMore && allExpenses.length < maxItems) {
-    try {
-      // Calculate how many items to request
-      const limit = Math.min(pageSize, maxItems - allExpenses.length);
-      
-      // Build request parameters
-      const requestParams: ListExpensesParams = {
-        limit,
-        cursor,
-        expand: ['merchant', 'budget'] // Always expand merchant and budget information
-      };
-      
-      // Add filters if provided
-      if (params.expense_type) {
-        requestParams.expense_type = params.expense_type;
-      }
-      
-      if (params.status) {
-        requestParams.status = params.status;
-      }
-      
-      if (params.payment_status) {
-        requestParams.payment_status = params.payment_status;
-      }
-      
-      // Use updated_at_start instead of created_at_start
-      if (params.start_date) {
-        requestParams.updated_at_start = params.start_date;
-      }
-      
-      // Handle end date (server-side)
-      if (params.end_date) {
-        requestParams.updated_at_end = params.end_date;
-      }
-      
-      // Fetch page of expenses
-      logDebug(`Fetching expenses page with cursor: ${cursor || 'initial'}`);
-      const response = await client.getExpenses(requestParams);
-      
-      // Filter valid expenses
-      let validExpenses = response.items.filter(isExpense);
-      
-      // Client-side end_date filtering if needed
-      if (params.end_date && !('updated_at_end' in requestParams)) {
-        const endDate = new Date(params.end_date).getTime();
-        validExpenses = validExpenses.filter(expense => {
-          const updatedAt = new Date(expense.updated_at).getTime();
-          return updatedAt <= endDate;
-        });
-      }
-      
-      allExpenses = allExpenses.concat(validExpenses);
-      
-      logDebug(`Retrieved ${validExpenses.length} expenses (total: ${allExpenses.length})`);
-      
-      // Check if we should continue pagination
-      cursor = response.nextCursor;
-      hasMore = !!cursor;
-      
-    } catch (error) {
-      logError(`Error fetching expenses page: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
+  const start = params.start_date ? new Date(params.start_date) : undefined;
+  const end = params.end_date ? new Date(params.end_date) : undefined;
+  const windowDays = params.window_days && start && end ? params.window_days : undefined;
+  
+  const windows: Array<{ start?: string; end?: string }> = [];
+  if (windowDays && start && end) {
+    const cursorStart = new Date(start);
+    while (cursorStart <= end && allExpenses.length < maxItems) {
+      const cursorEnd = new Date(cursorStart);
+      cursorEnd.setUTCDate(cursorEnd.getUTCDate() + windowDays);
+      if (cursorEnd > end) cursorEnd.setTime(end.getTime());
+      windows.push({ start: cursorStart.toISOString(), end: cursorEnd.toISOString() });
+      // advance by windowDays
+      cursorStart.setUTCDate(cursorStart.getUTCDate() + windowDays);
     }
+  } else {
+    windows.push({ start: params.start_date, end: params.end_date });
   }
   
+  for (const w of windows) {
+    let cursor: string | undefined = undefined;
+    let hasMore = true;
+    while (hasMore && allExpenses.length < maxItems) {
+      try {
+        const limit = Math.min(pageSize, maxItems - allExpenses.length);
+        const requestParams: ListExpensesParams = {
+          limit,
+          cursor,
+          expand: ['merchant', 'budget']
+        };
+        if (params.expense_type) requestParams.expense_type = params.expense_type;
+        if (params.status) requestParams.status = params.status;
+        if (params.payment_status) requestParams.payment_status = params.payment_status;
+        if (w.start) requestParams.updated_at_start = w.start;
+        if (w.end) requestParams.updated_at_end = w.end;
+        
+        logDebug(`Fetching expenses page (window ${w.start || 'none'}..${w.end || 'none'}) cursor: ${cursor || 'initial'}`);
+        const response = await client.getExpenses(requestParams);
+        
+        let validExpenses = response.items.filter(isExpense);
+        
+        // Client-side end_date filtering if needed
+        if (w.end && !('updated_at_end' in requestParams)) {
+          const endDate = new Date(w.end).getTime();
+          validExpenses = validExpenses.filter(expense => new Date(expense.updated_at).getTime() <= endDate);
+        }
+        
+        // Client-side amount thresholds
+        if (params.min_amount !== undefined) {
+          validExpenses = validExpenses.filter(e => typeof e.purchased_amount?.amount === 'number' && e.purchased_amount.amount >= (params.min_amount as number));
+        }
+        if (params.max_amount !== undefined) {
+          validExpenses = validExpenses.filter(e => typeof e.purchased_amount?.amount === 'number' && e.purchased_amount.amount <= (params.max_amount as number));
+        }
+        
+        allExpenses = allExpenses.concat(validExpenses);
+        logDebug(`Retrieved ${validExpenses.length} expenses (total: ${allExpenses.length})`);
+        cursor = response.nextCursor;
+        hasMore = !!cursor;
+      } catch (error) {
+        logError(`Error fetching expenses page: ${error instanceof Error ? error.message : String(error)}`);
+        throw error;
+      }
+    }
+    if (allExpenses.length >= maxItems) break;
+  }
   return allExpenses;
 }
 
@@ -228,7 +255,7 @@ async function fetchAllExpenses(client: BrexClient, params: GetAllExpensesParams
  * @param server The MCP server instance
  */
 export function registerGetAllExpenses(_server: Server): void {
-  registerToolHandler("get_all_expenses", async (request) => {
+  registerToolHandler("get_all_expenses", async (request: ToolCallRequest) => {
     try {
       // Validate parameters
       const params = validateParams(request.params.arguments);
@@ -240,15 +267,21 @@ export function registerGetAllExpenses(_server: Server): void {
       try {
         // Fetch all expenses with pagination
         const allExpenses = await fetchAllExpenses(brexClient, params);
+        const { items, summaryApplied } = limitExpensesPayload(allExpenses as any, {
+          summaryOnly: params.summary_only,
+          fields: params.fields,
+          hardTokenLimit: 24000
+        });
         
         logDebug(`Successfully fetched ${allExpenses.length} total expenses`);
         
         // Add helpful metadata about the request
         const result = {
-          expenses: allExpenses,
+          expenses: items,
           meta: {
-            total_count: allExpenses.length,
-            requested_parameters: params
+            total_count: items.length,
+            requested_parameters: params,
+            summary_applied: summaryApplied
           }
         };
         

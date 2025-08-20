@@ -5,11 +5,11 @@
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { CallToolRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+// import { CallToolRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { BrexClient } from "../services/brex/client.js";
 import { logDebug, logError } from "../utils/logger.js";
 import { isBrexAccount } from "../services/brex/types.js";
-import { registerToolHandler } from "./index.js";
+import { registerToolHandler, ToolCallRequest } from "./index.js";
 
 // Get Brex client
 function getBrexClient(): BrexClient {
@@ -46,11 +46,11 @@ function validateParams(input: any): GetAccountDetailsParams {
  * Registers the get_account_details tool with the server
  * @param server The MCP server instance
  */
-export function registerGetAccountDetails(server: Server): void {
-  registerToolHandler("get_account_details", async (request) => {
+export function registerGetAccountDetails(_server: Server): void {
+  registerToolHandler("get_account_details", async (request: ToolCallRequest) => {
     try {
       // Validate parameters
-      const params = validateParams(request.params.arguments);
+      const params = validateParams(request.params.arguments as unknown as Record<string, unknown>);
       logDebug(`Getting account details for account ${params.accountId}`);
       
       // Get Brex client

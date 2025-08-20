@@ -10,6 +10,8 @@ import { ResourceTemplate } from "../models/resourceTemplate.js";
 import { logDebug, logError } from "../utils/logger.js";
 import { BrexClient } from "../services/brex/client.js";
 import { isCashAccount, isStatement } from "../services/brex/transactions-types.js";
+import { parseQueryParams } from "../models/common.js";
+import { estimateTokens } from "../utils/responseLimiter.js";
 
 // Get Brex client
 function getBrexClient(): BrexClient {
@@ -19,7 +21,7 @@ function getBrexClient(): BrexClient {
 // Define resource templates
 const cashAccountsTemplate = new ResourceTemplate("brex://accounts/cash{/id}");
 const cashAccountsStatementsTemplate = new ResourceTemplate("brex://accounts/cash/{id}/statements");
-const primaryCashAccountTemplate = new ResourceTemplate("brex://accounts/cash/primary");
+// const primaryCashAccountTemplate = new ResourceTemplate("brex://accounts/cash/primary");
 
 /**
  * Registers the cash accounts resource handler with the server
@@ -44,7 +46,7 @@ export function registerCashAccountsResource(server: Server): void {
   });
 
   // Use the standard approach with setRequestHandler
-  server.setRequestHandler(ReadResourceRequestSchema, async (request, extra) => {
+  server.setRequestHandler(ReadResourceRequestSchema, async (request, _extra) => {
     const uri = request.params.uri;
     
     // Check if this handler should process this URI
@@ -97,9 +99,9 @@ export function registerCashAccountsResource(server: Server): void {
       }
       
       // Extract cursor and limit from query parameters
-      const url = new URL(uri);
-      const cursor = url.searchParams.get("cursor") || undefined;
-      const limit = url.searchParams.get("limit") ? parseInt(url.searchParams.get("limit") as string, 10) : undefined;
+      const qp = parseQueryParams(uri);
+      const cursor = qp.cursor || undefined;
+      const limit = qp.limit ? parseInt(qp.limit, 10) : undefined;
       
       try {
         logDebug(`Fetching statements for cash account ${statementsParams.id} from Brex API`);
@@ -119,22 +121,22 @@ export function registerCashAccountsResource(server: Server): void {
         
         logDebug(`Successfully fetched ${statements.items.length} statements for cash account ${statementsParams.id}`);
         
+        // Projection/limiting
+        const stmtFields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+        const stmtSummaryOnly = qp.summary_only === 'true';
+        const stmtTooBig = estimateTokens(JSON.stringify(statements.items)) > 24000;
+        const stmtSummarized = stmtSummaryOnly || stmtTooBig;
+        const stmtProjected = stmtSummarized && stmtFields && stmtFields.length ? statements.items.map(t => project(t, stmtFields)) : (stmtSummarized ? statements.items.map(t => project(t, DEFAULT_STMT_FIELDS)) : statements.items);
         // Format response with pagination information
         const result = {
-          items: statements.items,
+          items: stmtProjected,
           pagination: {
-            hasMore: !!statements.next_cursor,
-            nextCursor: statements.next_cursor
-          }
+            hasMore: !!(statements as any).next_cursor,
+            nextCursor: (statements as any).next_cursor
+          },
+          meta: { summary_applied: stmtSummarized }
         };
-        
-        return {
-          contents: [{
-            uri: uri,
-            mimeType: "application/json",
-            text: JSON.stringify(result, null, 2)
-          }]
-        };
+        return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(result, null, 2) }] };
       } catch (error) {
         logError(`Failed to fetch cash account statements: ${error instanceof Error ? error.message : String(error)}`);
         throw error;
@@ -197,13 +199,13 @@ export function registerCashAccountsResource(server: Server): void {
         }
         
         logDebug(`Successfully fetched cash account ${params.id}`);
-        return {
-          contents: [{
-            uri: uri,
-            mimeType: "application/json",
-            text: JSON.stringify(account, null, 2)
-          }]
-        };
+        const qp = parseQueryParams(uri);
+        const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+        const summaryOnly = qp.summary_only === 'true';
+        const tooBig = estimateTokens(JSON.stringify(account)) > 24000;
+        const summarized = summaryOnly || tooBig;
+        const projected = summarized && fields && fields.length ? project(account, fields) : account;
+        return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(projected, null, 2) }] };
       } catch (error) {
         logError(`Failed to fetch cash account ${params.id}: ${error instanceof Error ? error.message : String(error)}`);
         throw error;
@@ -211,3 +213,28 @@ export function registerCashAccountsResource(server: Server): void {
     }
   });
 } 
+
+const DEFAULT_STMT_FIELDS = [
+  'id',
+  'period_start',
+  'period_end',
+  'opening_balance.amount',
+  'opening_balance.currency',
+  'closing_balance.amount',
+  'closing_balance.currency'
+];
+
+function project(src: any, fields: string[]): any {
+  const out: any = {};
+  for (const f of fields) {
+    const parts = f.split('.');
+    let cur: any = src;
+    for (const p of parts) { cur = cur?.[p]; if (cur === undefined) break; }
+    if (cur !== undefined) {
+      let o: any = out;
+      for (let i = 0; i < parts.length - 1; i++) { o[parts[i]] = o[parts[i]] ?? {}; o = o[parts[i]]; }
+      o[parts[parts.length - 1]] = cur;
+    }
+  }
+  return out;
+}

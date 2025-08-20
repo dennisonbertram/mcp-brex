@@ -10,6 +10,8 @@ import { ResourceTemplate } from "../models/resourceTemplate.js";
 import { logDebug, logError } from "../utils/logger.js";
 import { BrexClient } from "../services/brex/client.js";
 import { isExpense, ListExpensesParams } from "../services/brex/expenses-types.js";
+import { parseQueryParams } from "../models/common.js";
+import { limitExpensesPayload } from "../utils/responseLimiter.js";
 
 // Get Brex client
 function getBrexClient(): BrexClient {
@@ -59,12 +61,16 @@ export function registerExpensesResource(server: Server): void {
           expand: ['merchant', 'budget'] // Always expand merchant and budget information
         };
         const expenses = await brexClient.getExpenses(listParams);
-        logDebug(`Successfully fetched ${expenses.items.length} expenses`);
+        const qp = parseQueryParams(uri);
+        const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+        const summaryOnly = qp.summary_only === 'true';
+        const limited = limitExpensesPayload(expenses.items as any, { summaryOnly, fields, hardTokenLimit: 24000 });
+        logDebug(`Successfully fetched ${expenses.items.length} expenses (returned: ${limited.items.length})`);
         return {
           contents: [{
             uri: uri,
             mimeType: "application/json",
-            text: JSON.stringify(expenses.items, null, 2)
+            text: JSON.stringify(limited.items, null, 2)
           }]
         };
       } catch (error) {
@@ -85,12 +91,16 @@ export function registerExpensesResource(server: Server): void {
           throw new Error('Invalid expense data received');
         }
         
-        logDebug(`Successfully fetched expense ${params.id}`);
+        const qp = parseQueryParams(uri);
+        const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+        const summaryOnly = qp.summary_only === 'true';
+        const limited = limitExpensesPayload([expense] as any, { summaryOnly, fields, hardTokenLimit: 24000 });
+        logDebug(`Successfully fetched expense ${params.id} (summaryApplied=${limited.items.length === 1 && JSON.stringify(limited.items[0]) !== JSON.stringify(expense)})`);
         return {
           contents: [{
             uri: uri,
             mimeType: "application/json",
-            text: JSON.stringify(expense, null, 2)
+            text: JSON.stringify(limited.items[0] || {}, null, 2)
           }]
         };
       } catch (error) {

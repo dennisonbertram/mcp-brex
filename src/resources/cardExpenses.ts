@@ -13,6 +13,8 @@ import {
   ListExpensesParams, 
   Expense
 } from "../services/brex/expenses-types.js";
+import { parseQueryParams } from "../models/common.js";
+import { limitExpensesPayload } from "../utils/responseLimiter.js";
 
 // Get Brex client
 function getBrexClient(): BrexClient {
@@ -74,12 +76,16 @@ export function registerCardExpensesResource(server: Server): void {
           expand: ['merchant', 'budget'] // Always expand merchant and budget information
         };
         const cardExpenses = await brexClient.getCardExpenses(listParams);
-        logDebug(`Successfully fetched ${cardExpenses.items.length} card expenses`);
+        const qp = parseQueryParams(uri);
+        const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+        const summaryOnly = qp.summary_only === 'true';
+        const limited = limitExpensesPayload(cardExpenses.items as any, { summaryOnly, fields, hardTokenLimit: 24000 });
+        logDebug(`Successfully fetched ${cardExpenses.items.length} card expenses (returned: ${limited.items.length})`);
         return {
           contents: [{
             uri: uri,
             mimeType: "application/json",
-            text: JSON.stringify(cardExpenses.items, null, 2)
+            text: JSON.stringify(limited.items, null, 2)
           }]
         };
       } catch (error) {
@@ -100,12 +106,16 @@ export function registerCardExpensesResource(server: Server): void {
           throw new Error('Invalid card expense data received');
         }
         
+        const qp = parseQueryParams(uri);
+        const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+        const summaryOnly = qp.summary_only === 'true';
+        const limited = limitExpensesPayload([cardExpense] as any, { summaryOnly, fields, hardTokenLimit: 24000 });
         logDebug(`Successfully fetched card expense ${params.id}`);
         return {
           contents: [{
             uri: uri,
             mimeType: "application/json",
-            text: JSON.stringify(cardExpense, null, 2)
+            text: JSON.stringify(limited.items[0] || {}, null, 2)
           }]
         };
       } catch (error) {

@@ -7,7 +7,7 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { BrexClient } from "../services/brex/client.js";
 import { logDebug, logError } from "../utils/logger.js";
-import { registerToolHandler } from "./index.js";
+import { registerToolHandler, ToolCallRequest } from "./index.js";
 
 // Get Brex client
 function getBrexClient(): BrexClient {
@@ -95,8 +95,8 @@ function validateParams(input: any): MatchReceiptParams {
  * Registers the match_receipt tool with the server
  * @param server The MCP server instance
  */
-export function registerMatchReceipt(server: Server): void {
-  registerToolHandler("match_receipt", async (request) => {
+export function registerMatchReceipt(_server: Server): void {
+  registerToolHandler("match_receipt", async (request: ToolCallRequest) => {
     try {
       // Validate parameters
       const params = validateParams(request.params.arguments);

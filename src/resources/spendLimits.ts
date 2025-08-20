@@ -3,12 +3,14 @@
  * @description Implements resource handlers for Brex spend limits API endpoints
  */
 
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { ReadResourceRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { logDebug, logError } from '../utils/logger.js';
 import { ResourceTemplate } from '../models/resourceTemplate.js';
 import { BrexClient } from '../services/brex/client.js';
 import { parseQueryParams } from '../models/common.js';
 import { isSpendLimit } from '../models/budget.js';
+import { estimateTokens } from '../utils/responseLimiter.js';
 
 /**
  * Get Brex client
@@ -26,9 +28,10 @@ const spendLimitsTemplate = new ResourceTemplate('brex://spend_limits{/id}');
  * Register the spend limits resource handler
  * @param server - MCP server instance
  */
-export const registerSpendLimitsResource = (server: any) => {
-  server.setRequestHandler(ReadResourceRequestSchema, async (request: any, extra: any) => {
-    const { uri } = request;
+export const registerSpendLimitsResource = (server: Server): void => {
+  server.setRequestHandler(ReadResourceRequestSchema, async (request: unknown, _extra: unknown) => {
+    const req = request as { params: { uri: string } };
+    const { uri } = req.params;
     
     // Check if we can handle this URI
     if (!uri.startsWith('brex://spend_limits')) {
@@ -52,10 +55,12 @@ export const registerSpendLimitsResource = (server: any) => {
           throw new Error(`Invalid spend limit data received for ID: ${id}`);
         }
         
-        return {
-          handled: true,
-          resource: spendLimit
-        };
+        const qp = parseQueryParams(uri);
+        const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+        const summaryOnly = qp.summary_only === 'true';
+        const summarized = summaryOnly || estimateTokens(JSON.stringify(spendLimit)) > 24000;
+        const out = project(spendLimit, fields);
+        return { handled: true, resource: summarized ? out : spendLimit };
       } else {
         // List spend limits with pagination
         logDebug('Fetching spend limits list');
@@ -68,10 +73,12 @@ export const registerSpendLimitsResource = (server: any) => {
           member_user_id: queryParams.member_user_id
         });
         
-        return {
-          handled: true,
-          resource: spendLimitsResponse,
-        };
+        const qp = parseQueryParams(uri);
+        const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+        const summaryOnly = qp.summary_only === 'true';
+        const summarized = summaryOnly || estimateTokens(JSON.stringify(spendLimitsResponse)) > 24000;
+        const projected = fields && fields.length ? spendLimitsResponse.items.map((b: any) => project(b, fields)) : spendLimitsResponse.items;
+        return { handled: true, resource: summarized ? { ...spendLimitsResponse, items: projected } : spendLimitsResponse };
       }
     } catch (error) {
       logError(`Error handling spend limit request: ${error instanceof Error ? error.message : String(error)}`);
@@ -81,3 +88,19 @@ export const registerSpendLimitsResource = (server: any) => {
 };
 
 export default registerSpendLimitsResource; 
+
+function project(src: any, fields?: string[]): any {
+  if (!fields || !fields.length) return src;
+  const out: any = {};
+  for (const f of fields) {
+    const parts = f.split('.');
+    let cur: any = src;
+    for (const p of parts) { cur = cur?.[p]; if (cur === undefined) break; }
+    if (cur !== undefined) {
+      let o: any = out;
+      for (let i = 0; i < parts.length - 1; i++) { o[parts[i]] = o[parts[i]] ?? {}; o = o[parts[i]]; }
+      o[parts[parts.length - 1]] = cur;
+    }
+  }
+  return out;
+}
