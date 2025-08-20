@@ -1,183 +1,115 @@
 # Brex MCP Server
 
-A Model Context Protocol (MCP) server for integrating with the Brex API, enabling AI agents to interact with financial data and resources.
+A Model Context Protocol (MCP) server for the Brex API. Optimized for safe, small, read-only responses with projection and batching.
 
-## Overview
+## Quick Start
 
-This MCP server provides a bridge between AI agents and the Brex financial platform, allowing agents to:
-
-- Retrieve account information and transactions
-- Access expense data and receipts
-- Manage budget resources and spend limits
-- View team information
-
-The server implements standardized resource handlers and tools following the MCP specification, enabling secure and efficient access to financial data.
-
-## Features
-
-### Resources
-
-#### Account Resources
-- `brex://accounts` - List all accounts
-- `brex://accounts/{id}` - Access specific account details
-
-#### Expense Resources
-- `brex://expenses` - List all expenses with pagination
-- `brex://expenses/{id}` - Access specific expense details
-- `brex://expenses/card` - List all card expenses
-- `brex://expenses/card/{id}` - Access specific card expense details
-
-> **Note**: Expense resources automatically expand merchant and budget information to display human-readable names instead of IDs.
-
-#### Budget Resources
-- `brex://budgets` - List all budgets with pagination
-- `brex://budgets/{id}` - Access specific budget details
-- `brex://spend_limits` - List all spend limits
-- `brex://spend_limits/{id}` - Access specific spend limit details
-- `brex://budget_programs` - List all budget programs
-- `brex://budget_programs/{id}` - Access specific budget program details
-
-#### Team Resources
-- `brex://users/me` - Get current user information
-
-### Tools
-
-#### Receipt Management
-- `match_receipt` - Match a receipt with existing expenses
-- `upload_receipt` - Upload a receipt for a specific expense
-
-#### Expense Management
-- `update_expense` - Update details for a card expense (memo, category, etc.)
-- `get_all_expenses` - Get all expenses with filtering options and expanded merchant/budget information
-- `get_all_card_expenses` - Get all card expenses with filtering options and expanded merchant/budget information
-
-> **Note**: For security reasons, tools that create, update, or delete budgets, spend limits, and budget programs are not implemented in this version.
-
-## Installation
-
-### Prerequisites
-- Node.js v18 or higher
-- Brex API access token
-
-### Setup
-
-1. Clone this repository:
-```bash
-git clone https://github.com/dennisonbertram/brex-mcp-server.git
-cd brex-mcp-server
-```
-
-2. Install dependencies:
+1) Install and build
 ```bash
 npm install
-```
-
-3. Create a `.env` file with your Brex API token:
-```
-BREX_API_KEY=your_token_here
-BREX_API_URL=https://platform.brexapis.com
-PORT=3000
-NODE_ENV=development
-RATE_LIMIT_REQUESTS=1000
-RATE_LIMIT_WINDOW_MS=60000
-LOG_LEVEL=info
-```
-
-4. Build the server:
-```bash
 npm run build
 ```
 
-### Configuration with Claude
+2) Run with stdio (example)
+```bash
+node build/index.js
+```
 
-To use with Claude Desktop, you need to add the server to Claude's configuration file:
+3) Configure your MCP client to launch this command and pass env vars:
+- `BREX_API_KEY` (required)
+- `BREX_API_URL` default `https://platform.brexapis.com`
 
-On macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-On Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+## Resources
 
-1. Open Claude for Desktop and go to settings by clicking on the Claude menu and selecting "Settings..."
-2. Click on "Developer" in the left sidebar, then click "Edit Config"
-3. Update the configuration file with the Brex MCP server settings:
+- `brex://expenses` | `brex://expenses/{id}` | `brex://expenses/card` | `brex://expenses/card/{id}`
+- `brex://budgets` | `brex://budgets/{id}`
+- `brex://spend_limits` | `brex://spend_limits/{id}`
+- `brex://budget_programs` | `brex://budget_programs/{id}`
+- `brex://transactions/card/primary` | `brex://transactions/cash/{id}`
+- `brex://docs/usage` (compact usage guide for agents)
+
+Notes:
+- Resources accept `?summary_only=true&fields=id,status,...` to control payload size.
+- Expenses resources auto-expand `merchant` and `budget` for readability.
+
+## Tools (read-only unless noted)
+
+- Budgets: `get_budgets`, `get_budget`
+- Spend Limits: `get_spend_limits`, `get_spend_limit`
+- Budget Programs: `get_budget_programs`, `get_budget_program`
+- Expenses (single page): `get_expenses`
+- Expenses (paginated): `get_all_expenses`, `get_all_card_expenses`
+- Expense by ID: `get_expense`, `get_card_expense`
+- Card Statements: `get_card_statements_primary`
+- Transactions: `get_card_transactions`, `get_cash_transactions`
+- Cash Statements: `get_cash_account_statements`
+- Accounts: `get_all_accounts`, `get_account_details`
+- Receipts (write): `match_receipt`, `upload_receipt`
+- Updates (write): `update_expense`
+
+## How to call tools
+
+Always send parameters under `arguments` (not `input`). Keep payloads small with `summary_only` and `fields`.
+
+Common parameters:
+- `summary_only: boolean` — compact projection; server auto-falls back if >24k tokens
+- `fields: string[]` — dot-notation projection (e.g., `purchased_amount.amount`)
+- Pagination: `page_size` (<=50), `max_items` (<=500 recommended)
+- Date batching: `start_date`, `end_date`, `window_days`
+- Thresholds: `min_amount`, `max_amount`
+
+Recommended examples:
 
 ```json
 {
-  "mcpServers": {
-    "brex-server": {
-      "command": "node",
-      "args": [
-        "/path/to/brex-mcp-server/build/index.js"
-      ],
-      "env": {
-        "BREX_API_KEY": "your_brex_api_key_here",
-        "BREX_API_URL": "https://platform.brexapis.com",
-        "PORT": "3000",
-        "NODE_ENV": "development",
-        "RATE_LIMIT_REQUESTS": "1000",
-        "RATE_LIMIT_WINDOW_MS": "60000",
-        "LOG_LEVEL": "info"
-      }
-    }
+  "name": "get_all_card_expenses",
+  "arguments": {
+    "page_size": 50,
+    "max_items": 200,
+    "start_date": "2025-08-01T00:00:00Z",
+    "end_date": "2025-08-18T00:00:00Z",
+    "window_days": 7,
+    "min_amount": 100,
+    "summary_only": true,
+    "fields": ["id","updated_at","status","purchased_amount.amount","purchased_amount.currency","merchant.raw_descriptor"]
   }
 }
 ```
 
-Make sure to:
-- Replace `/path/to/brex-mcp-server` with the actual path where you installed the server
-- Replace `your_brex_api_key_here` with your actual Brex API key
-- Use absolute paths for the server location
-
-Only the `BREX_API_KEY` and `BREX_API_URL` values are required; the other environment variables have sensible defaults but can be customized if needed.
-
-4. Save the file and restart Claude for Desktop
-5. Verify the server is working by checking for the hammer icon in the bottom right corner of the input box
-
-## Development
-
-For development with auto-rebuild:
-```bash
-npm run dev
+```json
+{
+  "name": "get_expenses",
+  "arguments": {
+    "limit": 5,
+    "status": "APPROVED",
+    "summary_only": true,
+    "fields": ["id","status","purchased_amount.amount","merchant.raw_descriptor"]
+  }
+}
 ```
 
-Lint your code:
-```bash
-npm run lint
+```json
+{
+  "name": "get_card_transactions",
+  "arguments": {
+    "limit": 10,
+    "posted_at_start": "2025-08-01T00:00:00Z",
+    "summary_only": true,
+    "fields": ["id","posted_at","amount.amount","amount.currency","merchant.raw_descriptor"]
+  }
+}
 ```
 
-Run tests:
-```bash
-npm run test
-```
-
-### Debugging
-
-Since MCP servers communicate over stdio, debugging can be challenging. We recommend using the [MCP Inspector](https://github.com/modelcontextprotocol/inspector) for debugging.
-
-## Usage Guide Resource
-
-Agents can read a compact usage guide via MCP resources:
-
-- `brex://docs/usage` — best practices, safe parameter patterns, and anti-patterns to avoid over-fetching.
+Best practices:
+- Always include `summary_only: true` and a focused `fields` list.
+- Use date ranges and `window_days` for high-volume orgs.
+- Keep `page_size <= 50`, prefer small `max_items`.
+- Cash endpoints require additional Brex scopes; handle 403s gracefully.
 
 ## Publishing
 
-This package publishes only `build`, `README.md`, and `LICENSE`. Development scripts and internal documentation are excluded from npm.
-
-## Security Considerations
-
-This server implements several security measures:
-- Read-only operations for sensitive financial resources
-- No storage of API credentials in code
-- Rate limiting for API requests
-- Proper error handling and logging
-
-## Implementation Status
-
-For a detailed implementation plan and status of various features, see `documentation/implementation_plan.md`.
+Only `build/`, `README.md`, and `LICENSE` are published.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
-
-## Author
-
-Dennison Bertram - [dennison@dennisonbertram.com](mailto:dennison@dennisonbertram.com)
+MIT — see `LICENSE`.
