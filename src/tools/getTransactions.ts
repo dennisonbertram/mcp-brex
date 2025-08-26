@@ -10,6 +10,7 @@ import { BrexClient } from "../services/brex/client.js";
 import { logDebug, logError } from "../utils/logger.js";
 import { isBrexTransaction } from "../services/brex/types.js";
 import { registerToolHandler, ToolCallRequest } from "./index.js";
+import { estimateTokens } from "../utils/responseLimiter.js";
 
 // Get Brex client
 function getBrexClient(): BrexClient {
@@ -22,6 +23,8 @@ function getBrexClient(): BrexClient {
 interface GetTransactionsParams {
   accountId: string;
   limit?: number;
+  summary_only?: boolean;
+  fields?: string[];
 }
 
 /**
@@ -49,6 +52,20 @@ function validateParams(input: unknown): GetTransactionsParams {
       throw new Error("Invalid limit: must be a positive number");
     }
     params.limit = limit;
+  }
+  
+  // Validate summary_only if provided
+  if (raw.summary_only !== undefined) {
+    params.summary_only = Boolean(raw.summary_only);
+  }
+  
+  // Validate fields if provided
+  if (raw.fields !== undefined) {
+    if (Array.isArray(raw.fields)) {
+      params.fields = raw.fields.map(String).filter((f: string) => f.trim().length > 0);
+    } else {
+      throw new Error("Invalid fields: must be an array of strings");
+    }
   }
   
   return params;
@@ -84,10 +101,53 @@ export function registerGetTransactions(_server: Server): void {
         const validTransactions = transactions.items.filter(isBrexTransaction);
         logDebug(`Found ${validTransactions.length} valid transactions out of ${transactions.items.length} total`);
         
+        // Apply response limiting
+        const fullText = JSON.stringify(validTransactions);
+        const tooBig = estimateTokens(fullText) > 24000;
+        const shouldSummarize = params.summary_only || tooBig;
+        
+        let processedTransactions = validTransactions;
+        if (shouldSummarize && params.fields) {
+          // Apply field projection if specified
+          processedTransactions = validTransactions.map(transaction => {
+            const projected: any = {};
+            for (const field of params.fields!) {
+              const value = getNestedValue(transaction, field);
+              if (value !== undefined) {
+                setNestedValue(projected, field, value);
+              }
+            }
+            return projected;
+          });
+        } else if (shouldSummarize) {
+          // Default summary fields for transactions
+          const defaultFields = ['id', 'posted_at', 'amount', 'description', 'status'];
+          processedTransactions = validTransactions.map(transaction => {
+            const projected: any = {};
+            for (const field of defaultFields) {
+              const value = getNestedValue(transaction, field);
+              if (value !== undefined) {
+                setNestedValue(projected, field, value);
+              }
+            }
+            return projected;
+          });
+        }
+        
+        const result = {
+          transactions: processedTransactions,
+          meta: {
+            account_id: params.accountId,
+            total_count: validTransactions.length,
+            requested_parameters: params,
+            summary_applied: shouldSummarize
+          }
+        };
+        
         return {
           content: [{
             type: "text",
-            text: JSON.stringify(validTransactions, null, 2)
+            text: JSON.stringify(result, null, 2)
           }]
         };
       } catch (apiError) {
@@ -99,4 +159,28 @@ export function registerGetTransactions(_server: Server): void {
       throw error;
     }
   });
+}
+
+// Helper functions for field projection
+function getNestedValue(obj: any, path: string): any {
+  const parts = path.split('.');
+  let current = obj;
+  for (const part of parts) {
+    if (current == null) return undefined;
+    current = current[part];
+  }
+  return current;
+}
+
+function setNestedValue(obj: any, path: string, value: any): void {
+  const parts = path.split('.');
+  let current = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const part = parts[i];
+    if (current[part] == null) {
+      current[part] = {};
+    }
+    current = current[part];
+  }
+  current[parts[parts.length - 1]] = value;
 } 

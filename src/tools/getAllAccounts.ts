@@ -9,6 +9,7 @@ import { BrexClient } from "../services/brex/client.js";
 import { logDebug, logError } from "../utils/logger.js";
 import { isBrexAccount } from "../services/brex/types.js";
 import { registerToolHandler, ToolCallRequest } from "./index.js";
+import { estimateTokens } from "../utils/responseLimiter.js";
 
 // Get Brex client
 function getBrexClient(): BrexClient {
@@ -22,6 +23,8 @@ interface GetAllAccountsParams {
   page_size?: number;
   max_items?: number;
   status?: string;
+  summary_only?: boolean;
+  fields?: string[];
 }
 
 /**
@@ -61,6 +64,20 @@ function validateParams(input: any): GetAllAccountsParams {
       throw new Error(`Invalid status: must be one of ${validStatuses.join(', ')}`);
     }
     params.status = input.status.toUpperCase();
+  }
+  
+  // Validate summary_only if provided
+  if (input.summary_only !== undefined) {
+    params.summary_only = Boolean(input.summary_only);
+  }
+  
+  // Validate fields if provided
+  if (input.fields !== undefined) {
+    if (Array.isArray(input.fields)) {
+      params.fields = input.fields.map(String).filter((f: string) => f.trim().length > 0);
+    } else {
+      throw new Error("Invalid fields: must be an array of strings");
+    }
   }
   
   return params;
@@ -135,12 +152,46 @@ export function registerGetAllAccounts(_server: Server): void {
         
         logDebug(`Successfully fetched ${allAccounts.length} total accounts`);
         
+        // Apply response limiting
+        const fullText = JSON.stringify(allAccounts);
+        const tooBig = estimateTokens(fullText) > 24000;
+        const shouldSummarize = params.summary_only || tooBig;
+        
+        let processedAccounts = allAccounts;
+        if (shouldSummarize && params.fields) {
+          // Apply field projection if specified
+          processedAccounts = allAccounts.map(account => {
+            const projected: any = {};
+            for (const field of params.fields!) {
+              const value = getNestedValue(account, field);
+              if (value !== undefined) {
+                setNestedValue(projected, field, value);
+              }
+            }
+            return projected;
+          });
+        } else if (shouldSummarize) {
+          // Default summary fields for accounts
+          const defaultFields = ['id', 'name', 'type', 'status', 'current_balance', 'available_balance'];
+          processedAccounts = allAccounts.map(account => {
+            const projected: any = {};
+            for (const field of defaultFields) {
+              const value = getNestedValue(account, field);
+              if (value !== undefined) {
+                setNestedValue(projected, field, value);
+              }
+            }
+            return projected;
+          });
+        }
+        
         // Add helpful metadata about the request
         const result = {
-          accounts: allAccounts,
+          accounts: processedAccounts,
           meta: {
             total_count: allAccounts.length,
-            requested_parameters: params
+            requested_parameters: params,
+            summary_applied: shouldSummarize
           }
         };
         
@@ -159,4 +210,28 @@ export function registerGetAllAccounts(_server: Server): void {
       throw error;
     }
   });
+}
+
+// Helper functions for field projection
+function getNestedValue(obj: any, path: string): any {
+  const parts = path.split('.');
+  let current = obj;
+  for (const part of parts) {
+    if (current == null) return undefined;
+    current = current[part];
+  }
+  return current;
+}
+
+function setNestedValue(obj: any, path: string, value: any): void {
+  const parts = path.split('.');
+  let current = obj;
+  for (let i = 0; i < parts.length - 1; i++) {
+    const part = parts[i];
+    if (current[part] == null) {
+      current[part] = {};
+    }
+    current = current[part];
+  }
+  current[parts[parts.length - 1]] = value;
 } 
