@@ -230,15 +230,13 @@ function registerListToolsHandler(server: Server): void {
         },
         {
           name: "get_cash_account_statements",
-          description: "Get cash account statements by account ID. Example: {\"account_id\":\"cash_acc_123\",\"limit\":5,\"summary_only\":true}",
+          description: "Get cash account statements by account ID. Returns complete statement objects. Example: {\"account_id\":\"cash_acc_123\",\"limit\":5}",
           inputSchema: {
             type: "object",
             properties: {
               account_id: { type: "string", description: "Cash account ID" },
               cursor: { type: "string", description: "Pagination cursor" },
-              limit: { type: "number", description: "Items per page (default 50)" },
-              summary_only: { type: "boolean", description: "Return summary fields only" },
-              fields: { type: "array", items: { type: "string" }, description: "Projection fields (dot-notation)" }
+              limit: { type: "number", description: "Items per page (default 50, max 100)" }
             },
             required: ["account_id"]
           }
