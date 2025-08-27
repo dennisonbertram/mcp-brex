@@ -135,15 +135,13 @@ function registerListToolsHandler(server: Server): void {
         },
         {
           name: "get_budget_programs",
-          description: "List budget programs (read-only). Example: {\"limit\":10,\"budget_program_status\":\"ACTIVE\",\"summary_only\":true}",
+          description: "List budget programs (read-only). Returns complete budget program objects. Example: {\"limit\":10,\"budget_program_status\":\"ACTIVE\"}",
           inputSchema: {
             type: "object",
             properties: {
               limit: { type: "number" },
               cursor: { type: "string" },
-              budget_program_status: { type: "string", enum: ["ACTIVE","INACTIVE"] },
-              summary_only: { type: "boolean" },
-              fields: { type: "array", items: { type: "string" } }
+              budget_program_status: { type: "string", enum: ["ACTIVE","INACTIVE"] }
             }
           }
         },
