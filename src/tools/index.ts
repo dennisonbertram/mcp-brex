@@ -153,13 +153,11 @@ function registerListToolsHandler(server: Server): void {
         },
         {
           name: "get_budget_program",
-          description: "Get a budget program by ID (read-only). Example: {\"id\":\"bp_123\",\"summary_only\":true}",
+          description: "Get a budget program by ID (read-only). Example: {\"id\":\"bp_123\"}",
           inputSchema: {
             type: "object",
             properties: {
-              id: { type: "string" },
-              summary_only: { type: "boolean" },
-              fields: { type: "array", items: { type: "string" } }
+              id: { type: "string" }
             },
             required: ["id"]
           }
