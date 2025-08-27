@@ -2,22 +2,41 @@
 
 A Model Context Protocol (MCP) server for the Brex API. Optimized for safe, small, read-only responses with projection and batching.
 
-## Quick Start
+## Installation
 
-1) Install and build
+### Claude Code
 ```bash
+# Install the package
+npm install -g mcp-brex
+
+# Add to Claude Code with your API key
+claude mcp add brex --env BREX_API_KEY=your_brex_api_key -- npx mcp-brex
+```
+
+### Claude Desktop
+Add to your `claude_desktop_config.json`:
+```json
+{
+  "mcpServers": {
+    "brex": {
+      "command": "npx",
+      "args": ["mcp-brex"],
+      "env": {
+        "BREX_API_KEY": "your_brex_api_key"
+      }
+    }
+  }
+}
+```
+
+### Manual Setup (Development)
+```bash
+git clone https://github.com/dennisonbertram/mcp-brex.git
+cd mcp-brex
 npm install
 npm run build
+claude mcp add brex --env BREX_API_KEY=your_key -- node build/index.js
 ```
-
-2) Run with stdio (example)
-```bash
-node build/index.js
-```
-
-3) Configure your MCP client to launch this command and pass env vars:
-- `BREX_API_KEY` (required)
-- `BREX_API_URL` default `https://platform.brexapis.com`
 
 ## Resources
 
