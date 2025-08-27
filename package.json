@@ -1,6 +1,6 @@
 {
   "name": "mcp-brex",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "MCP Server for Brex API Integration",
   "main": "build/index.js",
   "type": "module",
@@ -14,8 +14,8 @@
   },
   "author": {
     "name": "Dennison Bertram",
-    "email": "dennison@dennisonbertram.com",
-    "url": "https://dennisonbertram.com"
+    "email": "Dennison@dennisonbertram.com",
+    "url": "https://github.com/dennisonbertram"
   },
   "license": "MIT",
   "dependencies": {
