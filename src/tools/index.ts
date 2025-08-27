@@ -34,7 +34,7 @@ import { ExpenseType, ExpenseStatus, ExpensePaymentStatus } from "../services/br
 export type ToolCallRequest = { params: { name?: string; arguments?: Record<string, unknown> } };
 
 // Store tool handlers
-const toolHandlers = new Map<string, (request: ToolCallRequest) => Promise<unknown>>();
+export const toolHandlers = new Map<string, (request: ToolCallRequest) => Promise<unknown>>();
 
 /**
  * Registers all tools with the server
@@ -196,14 +196,12 @@ function registerListToolsHandler(server: Server): void {
         },
         {
           name: "get_card_statements_primary",
-          description: "Get statements for the primary card account. Example: {\"limit\":5,\"summary_only\":true,\"fields\":[\"id\",\"period_start\",\"total_amount.amount\"]}",
+          description: "Get complete statements for the primary card account. Returns full statement objects. Example: {\"limit\":10}",
           inputSchema: {
             type: "object",
             properties: {
               cursor: { type: "string" },
-              limit: { type: "number" },
-              summary_only: { type: "boolean" },
-              fields: { type: "array", items: { type: "string" } }
+              limit: { type: "number" }
             }
           }
         },
