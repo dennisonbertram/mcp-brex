@@ -278,6 +278,7 @@ export class BrexClient {
     cursor?: string;
     limit?: number;
     posted_at_start?: string;
+    expand?: string[];
   }): Promise<PageCashTransaction> {
     try {
       const params: Record<string, unknown> = {};
@@ -285,6 +286,7 @@ export class BrexClient {
         if (options.cursor) params.cursor = options.cursor;
         if (options.limit) params.limit = options.limit;
         if (options.posted_at_start) params.posted_at_start = options.posted_at_start;
+        if (options.expand) params.expand = options.expand;
       }
 
       logDebug(`Fetching cash transactions for account ${id} from Brex API`);

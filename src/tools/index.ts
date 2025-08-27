@@ -209,16 +209,15 @@ function registerListToolsHandler(server: Server): void {
         },
         {
           name: "get_cash_transactions",
-          description: "LIST: Cash transactions (requires cash scopes). Example: {\"account_id\":\"cash_acc_123\",\"limit\":10,\"summary_only\":true}. Notes: Requires cash scopes; always limit<=50 and use fields.",
+          description: "LIST: Cash transactions (requires cash scopes). Example: {\"account_id\":\"cash_acc_123\",\"limit\":10}. Returns complete transaction objects.",
           inputSchema: {
             type: "object",
             properties: {
               account_id: { type: "string", description: "Cash account ID" },
-              cursor: { type: "string" },
-              limit: { type: "number" },
-              posted_at_start: { type: "string" },
-              summary_only: { type: "boolean" },
-              fields: { type: "array", items: { type: "string" } }
+              cursor: { type: "string", description: "Pagination cursor" },
+              limit: { type: "number", description: "Items per page (1-100)" },
+              posted_at_start: { type: "string", description: "ISO timestamp to start from" },
+              expand: { type: "array", items: { type: "string" }, description: "Fields to expand" }
             },
             required: ["account_id"]
           }
