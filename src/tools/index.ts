@@ -112,7 +112,7 @@ function registerListToolsHandler(server: Server): void {
         },
         {
           name: "get_spend_limits",
-          description: "List spend limits (read-only). Example: {\"limit\":10,\"status\":\"ACTIVE\",\"summary_only\":true}",
+          description: "List spend limits (read-only). Example: {\"limit\":10,\"status\":\"ACTIVE\"}",
           inputSchema: {
             type: "object",
             properties: {
@@ -120,9 +120,7 @@ function registerListToolsHandler(server: Server): void {
               cursor: { type: "string" },
               parent_budget_id: { type: "string" },
               status: { type: "string", enum: ["ACTIVE","ARCHIVED"] },
-              member_user_id: { type: "string" },
-              summary_only: { type: "boolean" },
-              fields: { type: "array", items: { type: "string" } }
+              member_user_id: { type: "string" }
             }
           }
         },
