@@ -84,16 +84,14 @@ function registerListToolsHandler(server: Server): void {
       tools: [
         {
           name: "get_budgets",
-          description: "List budgets (read-only). Example: {\"limit\":10,\"summary_only\":true}",
+          description: "List budgets (read-only). Example: {\"limit\":10}",
           inputSchema: {
             type: "object",
             properties: {
               limit: { type: "number" },
               cursor: { type: "string" },
               parent_budget_id: { type: "string" },
-              spend_budget_status: { type: "string", enum: ["ACTIVE","ARCHIVED","DRAFT"] },
-              summary_only: { type: "boolean" },
-              fields: { type: "array", items: { type: "string" } }
+              spend_budget_status: { type: "string", enum: ["ACTIVE","ARCHIVED","DRAFT"] }
             }
           }
         },
