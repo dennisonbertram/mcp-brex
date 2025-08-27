@@ -15,7 +15,6 @@ import {
   isExpense 
 } from "../services/brex/expenses-types.js";
 import { registerToolHandler, ToolCallRequest } from "./index.js";
-import { limitExpensesPayload } from "../utils/responseLimiter.js";
 
 // Get Brex client
 function getBrexClient(): BrexClient {
@@ -33,11 +32,10 @@ interface GetAllExpensesParams {
   payment_status?: ExpensePaymentStatus[];
   start_date?: string;
   end_date?: string;
-  summary_only?: boolean;
-  fields?: string[];
   min_amount?: number;
   max_amount?: number;
   window_days?: number;
+  expand?: string[];
 }
 
 /**
@@ -167,6 +165,15 @@ function validateParams(input: unknown): GetAllExpensesParams {
     params.window_days = d;
   }
   
+  // Validate expand if provided
+  if (raw.expand !== undefined) {
+    if (Array.isArray(raw.expand)) {
+      params.expand = raw.expand.map(String).filter((e: string) => e.trim().length > 0);
+    } else {
+      throw new Error("Invalid expand: must be an array of strings");
+    }
+  }
+  
   return params;
 }
 
@@ -209,7 +216,7 @@ async function fetchAllExpenses(client: BrexClient, params: GetAllExpensesParams
         const requestParams: ListExpensesParams = {
           limit,
           cursor,
-          expand: ['merchant', 'budget']
+          expand: params.expand || [] // Use provided expand array or default to empty
         };
         if (params.expense_type) requestParams.expense_type = params.expense_type;
         if (params.status) requestParams.status = params.status;
@@ -267,21 +274,15 @@ export function registerGetAllExpenses(_server: Server): void {
       try {
         // Fetch all expenses with pagination
         const allExpenses = await fetchAllExpenses(brexClient, params);
-        const { items, summaryApplied } = limitExpensesPayload(allExpenses as any, {
-          summaryOnly: params.summary_only,
-          fields: params.fields,
-          hardTokenLimit: 24000
-        });
         
         logDebug(`Successfully fetched ${allExpenses.length} total expenses`);
         
-        // Add helpful metadata about the request
+        // Return raw results with pagination metadata
         const result = {
-          expenses: items,
+          expenses: allExpenses,
           meta: {
-            total_count: items.length,
-            requested_parameters: params,
-            summary_applied: summaryApplied
+            total_count: allExpenses.length,
+            requested_parameters: params
           }
         };
         

@@ -13,14 +13,16 @@ function buildUsageDoc(): Record<string, unknown> {
     title: "Brex MCP Usage Guide",
     key_principles: [
       "Always pass parameters under arguments, not input",
-      "Default to summary_only: true and provide a tight fields list",
-      "Use date ranges and small windows (window_days) for large datasets",
+      "Summary mode is DEFAULT for all bulk tools - pass summary_only: false to get full objects",
+      "Use date ranges and small windows (window_days) for large datasets", 
       "Keep page_size <= 50 and max_items <= 500 for paginated tools",
       "Prefer get_all_* for pagination; use get_*_expense for single items",
-      "Cash endpoints require cash scopes; card endpoints generally work by default"
+      "Cash endpoints require cash scopes; card endpoints generally work by default",
+      "Server automatically limits responses to 24K tokens (~96KB) - summarization applied when exceeded",
+      "Monitor meta.summary_applied in responses to see if limiting was triggered"
     ],
     common_parameters: {
-      summary_only: "boolean – project to compact fields to reduce payload size",
+      summary_only: "boolean – DEFAULTS TO TRUE. Pass false explicitly to get full objects",
       fields: "string[] – dot-notation fields to include (e.g., purchased_amount.amount)",
       page_size: "number – items per page (<= 50)",
       max_items: "number – cap total items across pages (<= 500 recommended)",
@@ -36,7 +38,9 @@ function buildUsageDoc(): Record<string, unknown> {
       { tool: "get_all_expenses", use_for: "Paginated list of all expenses (with filters)" },
       { tool: "get_expenses", use_for: "Single-page list (small samples)" },
       { tool: "get_card_transactions", use_for: "Primary card transactions (use posted_at_start)" },
-      { tool: "get_cash_transactions", use_for: "Cash transactions (requires cash scopes)" }
+      { tool: "get_cash_transactions", use_for: "Cash transactions (requires cash scopes)" },
+      { tool: "get_all_accounts", use_for: "Paginated list of all accounts (card/cash)" },
+      { tool: "get_transactions", use_for: "Legacy transactions for specific account ID" }
     ],
     recommended_patterns: [
       {
@@ -83,6 +87,31 @@ function buildUsageDoc(): Record<string, unknown> {
             posted_at_start: "2025-08-01T00:00:00Z",
             summary_only: true,
             fields: ["id", "posted_at", "amount.amount", "amount.currency", "merchant.raw_descriptor"]
+          }
+        }
+      },
+      {
+        name: "List all accounts (with summary)",
+        request: {
+          name: "get_all_accounts",
+          arguments: {
+            page_size: 25,
+            max_items: 100,
+            status: "ACTIVE",
+            summary_only: true,
+            fields: ["id", "name", "type", "status", "current_balance.amount", "available_balance.amount"]
+          }
+        }
+      },
+      {
+        name: "Get account transactions",
+        request: {
+          name: "get_transactions",
+          arguments: {
+            accountId: "acc_123456789",
+            limit: 20,
+            summary_only: true,
+            fields: ["id", "posted_at", "amount.amount", "amount.currency", "description", "status"]
           }
         }
       }

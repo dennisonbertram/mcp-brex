@@ -1,0 +1,644 @@
+{
+  "timestamp": "2025-08-26T18:52:50.295Z",
+  "environment": {
+    "platform": "darwin",
+    "nodeVersion": "v22.16.0",
+    "hasBrexApiKey": false
+  },
+  "tools": [
+    {
+      "name": "get_budgets",
+      "category": "Budget Management",
+      "arguments": {
+        "limit": 3,
+        "summary_only": true
+      },
+      "status": "exception",
+      "response": null,
+      "error": "MCP error -32603: Request failed with status code 403",
+      "hasData": false,
+      "responseSize": 0,
+      "executionTime": 316,
+      "apiComparison": {
+        "endpoint": "/v2/budgets",
+        "status": 401,
+        "statusText": "Unauthorized",
+        "headers": {
+          "connection": "keep-alive",
+          "date": "Tue, 26 Aug 2025 18:52:50 GMT",
+          "server": "istio-envoy",
+          "transfer-encoding": "chunked",
+          "x-brex-parent-id": "1345551515248405978",
+          "x-brex-sampling-priority": "1",
+          "x-brex-trace-id": "11309889984688705341",
+          "x-envoy-upstream-service-time": "3"
+        },
+        "body": "(empty)"
+      }
+    },
+    {
+      "name": "get_budget",
+      "category": "Budget Management",
+      "arguments": {
+        "budget_id": "budget_test_123",
+        "summary_only": true
+      },
+      "status": "exception",
+      "response": null,
+      "error": "MCP error -32603: Request failed with status code 403",
+      "hasData": false,
+      "responseSize": 0,
+      "executionTime": 133,
+      "apiComparison": {
+        "endpoint": "/v2/budgets/budget_test_123",
+        "status": 401,
+        "statusText": "Unauthorized",
+        "headers": {
+          "connection": "keep-alive",
+          "date": "Tue, 26 Aug 2025 18:52:52 GMT",
+          "server": "istio-envoy",
+          "transfer-encoding": "chunked",
+          "x-brex-parent-id": "3794238492657875746",
+          "x-brex-sampling-priority": "1",
+          "x-brex-trace-id": "6960533579864074990",
+          "x-envoy-upstream-service-time": "5"
+        },
+        "body": "(empty)"
+      }
+    },
+    {
+      "name": "get_spend_limits",
+      "category": "Budget Management",
+      "arguments": {
+        "limit": 3,
+        "summary_only": true
+      },
+      "status": "exception",
+      "response": null,
+      "error": "MCP error -32603: Request failed with status code 403",
+      "hasData": false,
+      "responseSize": 0,
+      "executionTime": 116,
+      "apiComparison": {
+        "endpoint": "/v2/spend_limits",
+        "status": 401,
+        "statusText": "Unauthorized",
+        "headers": {
+          "connection": "keep-alive",
+          "date": "Tue, 26 Aug 2025 18:52:53 GMT",
+          "server": "istio-envoy",
+          "transfer-encoding": "chunked",
+          "x-brex-parent-id": "17857881820820346513",
+          "x-brex-sampling-priority": "1",
+          "x-brex-trace-id": "4759540968555226749",
+          "x-envoy-upstream-service-time": "5"
+        },
+        "body": "(empty)"
+      }
+    },
+    {
+      "name": "get_spend_limit",
+      "category": "Budget Management",
+      "arguments": {
+        "id": "sl_test_123",
+        "summary_only": true
+      },
+      "status": "exception",
+      "response": null,
+      "error": "MCP error -32603: Request failed with status code 403",
+      "hasData": false,
+      "responseSize": 0,
+      "executionTime": 128,
+      "apiComparison": {
+        "endpoint": "/v2/spend_limits/sl_test_123",
+        "status": 401,
+        "statusText": "Unauthorized",
+        "headers": {
+          "connection": "keep-alive",
+          "date": "Tue, 26 Aug 2025 18:52:54 GMT",
+          "server": "istio-envoy",
+          "transfer-encoding": "chunked",
+          "x-brex-parent-id": "13799674637355642362",
+          "x-brex-sampling-priority": "1",
+          "x-brex-trace-id": "9591667947723482494",
+          "x-envoy-upstream-service-time": "2"
+        },
+        "body": "(empty)"
+      }
+    },
+    {
+      "name": "get_budget_programs",
+      "category": "Budget Management",
+      "arguments": {
+        "limit": 3,
+        "summary_only": true
+      },
+      "status": "exception",
+      "response": null,
+      "error": "MCP error -32603: Request failed with status code 403",
+      "hasData": false,
+      "responseSize": 0,
+      "executionTime": 84,
+      "apiComparison": {
+        "endpoint": "/v1/budget_programs",
+        "status": 401,
+        "statusText": "Unauthorized",
+        "headers": {
+          "connection": "keep-alive",
+          "date": "Tue, 26 Aug 2025 18:52:55 GMT",
+          "server": "istio-envoy",
+          "transfer-encoding": "chunked",
+          "x-brex-parent-id": "8506436358981297325",
+          "x-brex-sampling-priority": "1",
+          "x-brex-trace-id": "10494615892353553838",
+          "x-envoy-upstream-service-time": "2"
+        },
+        "body": "(empty)"
+      }
+    },
+    {
+      "name": "get_budget_program",
+      "category": "Budget Management",
+      "arguments": {
+        "id": "bp_test_123",
+        "summary_only": true
+      },
+      "status": "exception",
+      "response": null,
+      "error": "MCP error -32603: Request failed with status code 403",
+      "hasData": false,
+      "responseSize": 0,
+      "executionTime": 85,
+      "apiComparison": {
+        "endpoint": "/v1/budget_programs/bp_test_123",
+        "status": 401,
+        "statusText": "Unauthorized",
+        "headers": {
+          "connection": "keep-alive",
+          "date": "Tue, 26 Aug 2025 18:52:56 GMT",
+          "server": "istio-envoy",
+          "transfer-encoding": "chunked",
+          "x-brex-parent-id": "4260296121311344273",
+          "x-brex-sampling-priority": "1",
+          "x-brex-trace-id": "7017860470046642865",
+          "x-envoy-upstream-service-time": "2"
+        },
+        "body": "(empty)"
+      }
+    },
+    {
+      "name": "get_expenses",
+      "category": "Expense Management",
+      "arguments": {
+        "limit": 3,
+        "summary_only": true,
+        "fields": [
+          "id",
+          "status",
+          "purchased_amount.amount"
+        ]
+      },
+      "status": "exception",
+      "response": null,
+      "error": "MCP error -32603: Failed to get expenses: Request failed with status code 403",
+      "hasData": false,
+      "responseSize": 0,
+      "executionTime": 85,
+      "apiComparison": {
+        "endpoint": "/v1/expenses",
+        "status": 401,
+        "statusText": "Unauthorized",
+        "headers": {
+          "connection": "keep-alive",
+          "date": "Tue, 26 Aug 2025 18:52:58 GMT",
+          "server": "istio-envoy",
+          "transfer-encoding": "chunked",
+          "x-brex-parent-id": "15041882806570160598",
+          "x-brex-sampling-priority": "1",
+          "x-brex-trace-id": "5224540441462790302",
+          "x-envoy-upstream-service-time": "2"
+        },
+        "body": "(empty)"
+      }
+    },
+    {
+      "name": "get_all_expenses",
+      "category": "Expense Management",
+      "arguments": {
+        "page_size": 3,
+        "max_items": 3,
+        "summary_only": true,
+        "start_date": "2025-08-20T00:00:00Z",
+        "end_date": "2025-08-26T23:59:59Z"
+      },
+      "status": "exception",
+      "response": null,
+      "error": "MCP error -32603: Failed to get expenses: Request failed with status code 403",
+      "hasData": false,
+      "responseSize": 0,
+      "executionTime": 123,
+      "apiComparison": {
+        "endpoint": "/v1/expenses",
+        "status": 401,
+        "statusText": "Unauthorized",
+        "headers": {
+          "connection": "keep-alive",
+          "date": "Tue, 26 Aug 2025 18:52:59 GMT",
+          "server": "istio-envoy",
+          "transfer-encoding": "chunked",
+          "x-brex-parent-id": "4328214023398648389",
+          "x-brex-sampling-priority": "1",
+          "x-brex-trace-id": "14244463122446224817",
+          "x-envoy-upstream-service-time": "1"
+        },
+        "body": "(empty)"
+      }
+    },
+    {
+      "name": "get_expense",
+      "category": "Expense Management",
+      "arguments": {
+        "expense_id": "expense_test_123",
+        "summary_only": true
+      },
+      "status": "exception",
+      "response": null,
+      "error": "MCP error -32603: Request failed with status code 403",
+      "hasData": false,
+      "responseSize": 0,
+      "executionTime": 81,
+      "apiComparison": {
+        "endpoint": "/v1/expenses/expense_test_123",
+        "status": 401,
+        "statusText": "Unauthorized",
+        "headers": {
+          "connection": "keep-alive",
+          "date": "Tue, 26 Aug 2025 18:53:00 GMT",
+          "server": "istio-envoy",
+          "transfer-encoding": "chunked",
+          "x-brex-parent-id": "14966436743478879456",
+          "x-brex-sampling-priority": "1",
+          "x-brex-trace-id": "16637243895234671079",
+          "x-envoy-upstream-service-time": "1"
+        },
+        "body": "(empty)"
+      }
+    },
+    {
+      "name": "get_all_card_expenses",
+      "category": "Expense Management",
+      "arguments": {
+        "page_size": 3,
+        "max_items": 3,
+        "summary_only": true,
+        "start_date": "2025-08-20T00:00:00Z",
+        "end_date": "2025-08-26T23:59:59Z"
+      },
+      "status": "success",
+      "response": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"card_expenses\": [],\n  \"meta\": {\n    \"total_count\": 0,\n    \"requested_parameters\": {\n      \"page_size\": 3,\n      \"max_items\": 3,\n      \"start_date\": \"2025-08-20T00:00:00.000Z\",\n      \"end_date\": \"2025-08-26T23:59:59.000Z\"\n    },\n    \"summary_applied\": false\n  }\n}"
+          }
+        ]
+      },
+      "error": null,
+      "hasData": true,
+      "responseSize": 340,
+      "executionTime": 79,
+      "apiComparison": null
+    },
+    {
+      "name": "get_card_expense",
+      "category": "Expense Management",
+      "arguments": {
+        "expense_id": "card_expense_test_123",
+        "summary_only": true
+      },
+      "status": "success",
+      "response": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"expense\": {\n    \"id\": \"card_expense_test_123\",\n    \"updated_at\": \"2025-08-26T18:53:02.705Z\",\n    \"status\": \"DRAFT\"\n  },\n  \"meta\": {\n    \"summary_applied\": true\n  }\n}"
+          }
+        ]
+      },
+      "error": null,
+      "hasData": true,
+      "responseSize": 236,
+      "executionTime": 81,
+      "apiComparison": null
+    },
+    {
+      "name": "get_all_accounts",
+      "category": "Account Management",
+      "arguments": {
+        "page_size": 3,
+        "max_items": 3
+      },
+      "status": "exception",
+      "response": null,
+      "error": "MCP error -32603: Failed to get accounts: Request failed with status code 403",
+      "hasData": false,
+      "responseSize": 0,
+      "executionTime": 77,
+      "apiComparison": {
+        "endpoint": "/v2/accounts/cash",
+        "status": 401,
+        "statusText": "Unauthorized",
+        "headers": {
+          "connection": "keep-alive",
+          "date": "Tue, 26 Aug 2025 18:53:03 GMT",
+          "server": "istio-envoy",
+          "transfer-encoding": "chunked",
+          "x-brex-parent-id": "2463756989133325857",
+          "x-brex-sampling-priority": "1",
+          "x-brex-trace-id": "14986039107895465184",
+          "x-envoy-upstream-service-time": "1"
+        },
+        "body": "(empty)"
+      }
+    },
+    {
+      "name": "get_account_details",
+      "category": "Account Management",
+      "arguments": {
+        "accountId": "account_test_123"
+      },
+      "status": "exception",
+      "response": null,
+      "error": "MCP error -32603: Failed to get account details: Request failed with status code 403",
+      "hasData": false,
+      "responseSize": 0,
+      "executionTime": 148,
+      "apiComparison": {
+        "endpoint": "/v2/accounts/cash/account_test_123",
+        "status": 401,
+        "statusText": "Unauthorized",
+        "headers": {
+          "connection": "keep-alive",
+          "date": "Tue, 26 Aug 2025 18:53:05 GMT",
+          "server": "istio-envoy",
+          "transfer-encoding": "chunked",
+          "x-brex-parent-id": "11537984262872501697",
+          "x-brex-sampling-priority": "1",
+          "x-brex-trace-id": "11151341709023478318",
+          "x-envoy-upstream-service-time": "1"
+        },
+        "body": "(empty)"
+      }
+    },
+    {
+      "name": "get_transactions",
+      "category": "Transaction Management",
+      "arguments": {
+        "accountId": "account_test_123",
+        "limit": 3
+      },
+      "status": "exception",
+      "response": null,
+      "error": "MCP error -32603: Failed to get transactions: Request failed with status code 403",
+      "hasData": false,
+      "responseSize": 0,
+      "executionTime": 80,
+      "apiComparison": {
+        "endpoint": "/v2/accounts/cash/account_test_123/statements",
+        "status": 401,
+        "statusText": "Unauthorized",
+        "headers": {
+          "connection": "keep-alive",
+          "date": "Tue, 26 Aug 2025 18:53:06 GMT",
+          "server": "istio-envoy",
+          "transfer-encoding": "chunked",
+          "x-brex-parent-id": "4749008037451201903",
+          "x-brex-sampling-priority": "1",
+          "x-brex-trace-id": "10020893520957591272",
+          "x-envoy-upstream-service-time": "1"
+        },
+        "body": "(empty)"
+      }
+    },
+    {
+      "name": "get_card_transactions",
+      "category": "Transaction Management",
+      "arguments": {
+        "limit": 3,
+        "posted_at_start": "2025-08-20T00:00:00Z",
+        "summary_only": true,
+        "fields": [
+          "id",
+          "posted_at",
+          "amount.amount"
+        ]
+      },
+      "status": "exception",
+      "response": null,
+      "error": "MCP error -32603: Request failed with status code 403",
+      "hasData": false,
+      "responseSize": 0,
+      "executionTime": 79,
+      "apiComparison": {
+        "endpoint": "/v2/transactions/card/primary",
+        "status": 401,
+        "statusText": "Unauthorized",
+        "headers": {
+          "connection": "keep-alive",
+          "date": "Tue, 26 Aug 2025 18:53:07 GMT",
+          "server": "istio-envoy",
+          "transfer-encoding": "chunked",
+          "x-brex-parent-id": "9527170016869079111",
+          "x-brex-sampling-priority": "1",
+          "x-brex-trace-id": "9567504199284881394",
+          "x-envoy-upstream-service-time": "1"
+        },
+        "body": "(empty)"
+      }
+    },
+    {
+      "name": "get_cash_transactions",
+      "category": "Transaction Management",
+      "arguments": {
+        "account_id": "cash_account_test_123",
+        "limit": 3,
+        "summary_only": true
+      },
+      "status": "exception",
+      "response": null,
+      "error": "MCP error -32603: Request failed with status code 403",
+      "hasData": false,
+      "responseSize": 0,
+      "executionTime": 81,
+      "apiComparison": {
+        "endpoint": "/v2/transactions/cash/cash_account_test_123",
+        "status": 401,
+        "statusText": "Unauthorized",
+        "headers": {
+          "connection": "keep-alive",
+          "date": "Tue, 26 Aug 2025 18:53:08 GMT",
+          "server": "istio-envoy",
+          "transfer-encoding": "chunked",
+          "x-brex-parent-id": "2638764139886033828",
+          "x-brex-sampling-priority": "1",
+          "x-brex-trace-id": "15637297453723687128",
+          "x-envoy-upstream-service-time": "1"
+        },
+        "body": "(empty)"
+      }
+    },
+    {
+      "name": "get_card_statements_primary",
+      "category": "Statements",
+      "arguments": {
+        "limit": 3,
+        "summary_only": true
+      },
+      "status": "exception",
+      "response": null,
+      "error": "MCP error -32603: Request failed with status code 403",
+      "hasData": false,
+      "responseSize": 0,
+      "executionTime": 80,
+      "apiComparison": {
+        "endpoint": "/v2/accounts/card/primary/statements",
+        "status": 401,
+        "statusText": "Unauthorized",
+        "headers": {
+          "connection": "keep-alive",
+          "date": "Tue, 26 Aug 2025 18:53:09 GMT",
+          "server": "istio-envoy",
+          "transfer-encoding": "chunked",
+          "x-brex-parent-id": "14777816504468657430",
+          "x-brex-sampling-priority": "1",
+          "x-brex-trace-id": "1686073331855344017",
+          "x-envoy-upstream-service-time": "1"
+        },
+        "body": "(empty)"
+      }
+    },
+    {
+      "name": "get_cash_account_statements",
+      "category": "Statements",
+      "arguments": {
+        "account_id": "cash_account_test_123",
+        "limit": 3,
+        "summary_only": true
+      },
+      "status": "exception",
+      "response": null,
+      "error": "MCP error -32603: Request failed with status code 403",
+      "hasData": false,
+      "responseSize": 0,
+      "executionTime": 83,
+      "apiComparison": {
+        "endpoint": "/v2/accounts/cash/cash_account_test_123/statements",
+        "status": 401,
+        "statusText": "Unauthorized",
+        "headers": {
+          "connection": "keep-alive",
+          "date": "Tue, 26 Aug 2025 18:53:10 GMT",
+          "server": "istio-envoy",
+          "transfer-encoding": "chunked",
+          "x-brex-parent-id": "18072968885799108980",
+          "x-brex-sampling-priority": "1",
+          "x-brex-trace-id": "5651107150880271998",
+          "x-envoy-upstream-service-time": "1"
+        },
+        "body": "(empty)"
+      }
+    },
+    {
+      "name": "update_expense",
+      "category": "Write Operations",
+      "arguments": {
+        "expense_id": "expense_test_123",
+        "memo": "Test memo from MCP tool testing"
+      },
+      "status": "exception",
+      "response": null,
+      "error": "MCP error -32603: Failed to update expense: Expense update failed: Request failed with status code 403",
+      "hasData": false,
+      "responseSize": 0,
+      "executionTime": 94,
+      "apiComparison": {
+        "endpoint": "/v1/expenses/card/expense_test_123",
+        "status": 405,
+        "statusText": "Method Not Allowed",
+        "headers": {
+          "allow": "HEAD,PUT,GET",
+          "connection": "keep-alive",
+          "content-length": "259",
+          "content-type": "application/json",
+          "date": "Tue, 26 Aug 2025 18:53:12 GMT",
+          "server": "istio-envoy",
+          "x-brex-parent-id": "3134033483283130657",
+          "x-brex-sampling-priority": "1",
+          "x-brex-trace-id": "18173263115497777505",
+          "x-envoy-upstream-service-time": "105"
+        },
+        "body": "{\"message\":\"Method Not Allowed\",\"_links\":{\"self\":{\"href\":\"/v1/expenses/card/expense_test_123\",\"templated\":false}},\"_embedded\":{\"errors\":[{\"message\":\"Method [POST] not allowed for URI [/v1/expenses/card/expense_test_123]. Allowed methods: [HEAD, PUT, GET]\"}]}}"
+      }
+    },
+    {
+      "name": "upload_receipt",
+      "category": "Write Operations",
+      "arguments": {
+        "receipt_data": "dGVzdCBkYXRh",
+        "receipt_name": "test_receipt.jpg",
+        "content_type": "image/jpeg"
+      },
+      "status": "success",
+      "response": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\n  \"status\": \"success\",\n  \"receipt_id\": \"receipt-1756234393627-cqv93ip\",\n  \"message\": \"Receipt uploaded successfully with ID: receipt-1756234393627-cqv93ip\"\n}"
+          }
+        ]
+      },
+      "error": null,
+      "hasData": true,
+      "responseSize": 214,
+      "executionTime": 504,
+      "apiComparison": null
+    },
+    {
+      "name": "match_receipt",
+      "category": "Write Operations",
+      "arguments": {
+        "receipt_name": "test_receipt_match.jpg",
+        "receipt_type": "expense",
+        "notify_email": "test@example.com"
+      },
+      "status": "exception",
+      "response": null,
+      "error": "MCP error -32603: Failed to create receipt match: Receipt match request failed: Request failed with status code 403",
+      "hasData": false,
+      "responseSize": 0,
+      "executionTime": 152,
+      "apiComparison": {
+        "endpoint": "/v1/expenses/card/receipt_match",
+        "status": 401,
+        "statusText": "Unauthorized",
+        "headers": {
+          "connection": "keep-alive",
+          "date": "Tue, 26 Aug 2025 18:53:14 GMT",
+          "server": "istio-envoy",
+          "transfer-encoding": "chunked",
+          "x-brex-parent-id": "9373764621618091097",
+          "x-brex-sampling-priority": "1",
+          "x-brex-trace-id": "6510755738670920523",
+          "x-envoy-upstream-service-time": "10"
+        },
+        "body": "(empty)"
+      }
+    }
+  ],
+  "summary": {
+    "total": 21,
+    "passed": 3,
+    "failed": 18,
+    "noResponse": 0
+  }
+}

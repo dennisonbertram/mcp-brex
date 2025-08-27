@@ -352,7 +352,7 @@ export class BrexClient {
       logDebug('Fetching expenses from Brex API');
       const query: Record<string, unknown> = {};
       if (params) {
-        if (params.expand) query['expand[]'] = params.expand;
+        if (params.expand !== undefined) query['expand[]'] = params.expand;
         if (params.user_id) query['user_id[]'] = params.user_id;
         if (params.parent_expense_id) query['parent_expense_id[]'] = params.parent_expense_id;
         if (params.budget_id) query['budget_id[]'] = params.budget_id;
@@ -404,29 +404,23 @@ export class BrexClient {
     try {
       logDebug('Fetching card expenses from Brex API');
       try {
-        // Build query with correct bracketed array keys
-        const expandedParams: ListExpensesParams = { ...(params || {}) };
-        if (!expandedParams.expand) {
-          expandedParams.expand = ['merchant'];
-        } else if (Array.isArray(expandedParams.expand) && !expandedParams.expand.includes('merchant')) {
-          expandedParams.expand.push('merchant');
-        }
+        // Build query with correct bracketed array keys - respect user's expand choices
         const query: Record<string, unknown> = {};
-        if (expandedParams.expand) query['expand[]'] = expandedParams.expand;
-        if (expandedParams.user_id) query['user_id[]'] = expandedParams.user_id;
-        if (expandedParams.parent_expense_id) query['parent_expense_id[]'] = expandedParams.parent_expense_id;
-        if (expandedParams.budget_id) query['budget_id[]'] = expandedParams.budget_id;
-        if (expandedParams.spending_entity_id) query['spending_entity_id[]'] = expandedParams.spending_entity_id;
+        if (params?.expand !== undefined) query['expand[]'] = params.expand;
+        if (params?.user_id) query['user_id[]'] = params.user_id;
+        if (params?.parent_expense_id) query['parent_expense_id[]'] = params.parent_expense_id;
+        if (params?.budget_id) query['budget_id[]'] = params.budget_id;
+        if (params?.spending_entity_id) query['spending_entity_id[]'] = params.spending_entity_id;
         // Do NOT send expense_type to /card endpoint; filter is implied
-        if (expandedParams.status) query['status[]'] = expandedParams.status;
-        if (expandedParams.payment_status) query['payment_status[]'] = expandedParams.payment_status;
-        if (expandedParams.purchased_at_start) query.purchased_at_start = expandedParams.purchased_at_start;
-        if (expandedParams.purchased_at_end) query.purchased_at_end = expandedParams.purchased_at_end;
-        if (expandedParams.updated_at_start) query.updated_at_start = expandedParams.updated_at_start;
-        if (expandedParams.updated_at_end) query.updated_at_end = expandedParams.updated_at_end;
-        if (expandedParams.load_custom_fields !== undefined) query.load_custom_fields = expandedParams.load_custom_fields;
-        if (expandedParams.cursor) query.cursor = expandedParams.cursor;
-        if (expandedParams.limit) query.limit = expandedParams.limit;
+        if (params?.status) query['status[]'] = params.status;
+        if (params?.payment_status) query['payment_status[]'] = params.payment_status;
+        if (params?.purchased_at_start) query.purchased_at_start = params.purchased_at_start;
+        if (params?.purchased_at_end) query.purchased_at_end = params.purchased_at_end;
+        if (params?.updated_at_start) query.updated_at_start = params.updated_at_start;
+        if (params?.updated_at_end) query.updated_at_end = params.updated_at_end;
+        if (params?.load_custom_fields !== undefined) query.load_custom_fields = params.load_custom_fields;
+        if (params?.cursor) query.cursor = params.cursor;
+        if (params?.limit) query.limit = params.limit;
 
         const response = await this.client.get('/v1/expenses/card', { params: query });
         const data = (response.data || {}) as { items?: unknown[]; next_cursor?: string };

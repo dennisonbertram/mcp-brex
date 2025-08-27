@@ -49,14 +49,15 @@ Notes:
 
 ## How to call tools
 
-Always send parameters under `arguments` (not `input`). Keep payloads small with `summary_only` and `fields`.
+Always send parameters under `arguments` (not `input`). Keep payloads small with pagination and filtering.
 
 Common parameters:
-- `summary_only: boolean` — compact projection; server auto-falls back if >24k tokens
-- `fields: string[]` — dot-notation projection (e.g., `purchased_amount.amount`)
-- Pagination: `page_size` (<=50), `max_items` (<=500 recommended)
-- Date batching: `start_date`, `end_date`, `window_days`
-- Thresholds: `min_amount`, `max_amount`
+- Pagination: `page_size` (<=50), `max_items` (<=200 recommended)  
+- Date filtering: `start_date`, `end_date`, `window_days`
+- Status filtering: `status` array for expenses/transactions
+- Amount filtering: `min_amount`, `max_amount` for expenses
+- Merchant filtering: `merchant_name` for expenses
+- Expand control: `expand` array to include nested objects (e.g., `["merchant", "budget"]`)
 
 Recommended examples:
 
@@ -64,14 +65,12 @@ Recommended examples:
 {
   "name": "get_all_card_expenses",
   "arguments": {
-    "page_size": 50,
-    "max_items": 200,
-    "start_date": "2025-08-01T00:00:00Z",
-    "end_date": "2025-08-18T00:00:00Z",
-    "window_days": 7,
-    "min_amount": 100,
-    "summary_only": true,
-    "fields": ["id","updated_at","status","purchased_amount.amount","purchased_amount.currency","merchant.raw_descriptor"]
+    "page_size": 10,
+    "max_items": 20,
+    "start_date": "2025-08-25T00:00:00Z",
+    "end_date": "2025-08-26T00:00:00Z",
+    "status": ["APPROVED"],
+    "min_amount": 100
   }
 }
 ```
@@ -81,9 +80,7 @@ Recommended examples:
   "name": "get_expenses",
   "arguments": {
     "limit": 5,
-    "status": "APPROVED",
-    "summary_only": true,
-    "fields": ["id","status","purchased_amount.amount","merchant.raw_descriptor"]
+    "status": "APPROVED"
   }
 }
 ```
@@ -93,18 +90,65 @@ Recommended examples:
   "name": "get_card_transactions",
   "arguments": {
     "limit": 10,
-    "posted_at_start": "2025-08-01T00:00:00Z",
-    "summary_only": true,
-    "fields": ["id","posted_at","amount.amount","amount.currency","merchant.raw_descriptor"]
+    "posted_at_start": "2025-08-25T00:00:00Z"
   }
 }
 ```
 
-Best practices:
-- Always include `summary_only: true` and a focused `fields` list.
-- Use date ranges and `window_days` for high-volume orgs.
-- Keep `page_size <= 50`, prefer small `max_items`.
-- Cash endpoints require additional Brex scopes; handle 403s gracefully.
+```json
+{
+  "name": "get_all_accounts",
+  "arguments": {
+    "page_size": 10,
+    "max_items": 20,
+    "status": "ACTIVE"
+  }
+}
+```
+
+```json
+{
+  "name": "get_transactions",
+  "arguments": {
+    "accountId": "acc_123456789",
+    "limit": 10
+  }
+}
+```
+
+```json
+{
+  "name": "get_expenses",
+  "arguments": {
+    "limit": 5,
+    "expand": ["merchant", "user"]
+  }
+}
+```
+
+## Pagination and Filtering Best Practices
+
+**IMPORTANT**: Use pagination, filtering, and sorting to control response sizes instead of relying on summaries.
+
+### Key Parameters for Data Control:
+- **`page_size: number`** — Items per page (recommended: ≤50)
+- **`max_items: number`** — Maximum total items across all pages (recommended: ≤200)
+- **`start_date/end_date: string`** — ISO date range filtering
+- **`window_days: number`** — Split large date ranges into smaller batches
+- **`status: string[]`** — Filter by status (e.g., ["APPROVED", "PENDING"])
+- **`min_amount/max_amount: number`** — Amount-based filtering for expenses
+
+### Best Practices:
+- **Always use date ranges** for bulk requests to avoid huge responses
+- **Use small page sizes** (≤50) and reasonable max_items (≤200)
+- **Apply status filters** to get only the data you need
+- **Use window_days** (e.g., 7) to batch large date ranges
+- **Control nested object expansion** with the `expand` parameter:
+  - **Default**: `expand: []` returns lean objects (~500-1000 tokens each)
+  - **With expansion**: `expand: ["merchant", "budget"]` returns full objects (~15K+ tokens each)
+  - **Available expand options**: `merchant`, `budget`, `user`, `department`, `location`, `receipts`
+- **Test with small limits first** before scaling up
+- Cash endpoints require additional Brex scopes; handle 403s gracefully
 
 ## Publishing
 

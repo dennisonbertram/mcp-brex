@@ -15,7 +15,6 @@ import {
   isExpense 
 } from "../services/brex/expenses-types.js";
 import { registerToolHandler, ToolCallRequest } from "./index.js";
-import { limitExpensesPayload } from "../utils/responseLimiter.js";
 
 // Get Brex client
 function getBrexClient(): BrexClient {
@@ -30,8 +29,7 @@ interface GetExpensesParams {
   status?: ExpenseStatus;
   payment_status?: ExpensePaymentStatus;
   limit?: number;
-  summary_only?: boolean;
-  fields?: string[];
+  expand?: string[];
 }
 
 /**
@@ -79,6 +77,15 @@ function validateParams(input: any): GetExpensesParams {
     params.limit = limit;
   }
   
+  // Validate expand if provided
+  if (input.expand !== undefined) {
+    if (Array.isArray(input.expand)) {
+      params.expand = input.expand.map(String).filter((e: string) => e.trim().length > 0);
+    } else {
+      throw new Error("Invalid expand: must be an array of strings");
+    }
+  }
+  
   return params;
 }
 
@@ -100,9 +107,10 @@ export function registerGetExpenses(_server: Server): void {
       const limit = params.limit || 50;
       
       try {
-        // Prepare API parameters
+        // Prepare API parameters - use user-provided expand or default to empty
         const apiParams: ListExpensesParams = {
-          limit
+          limit,
+          expand: params.expand || [] // Use provided expand array or default to empty for minimal response size
         };
         
         // Add filters if provided, ensuring expense_type is an array
@@ -126,20 +134,15 @@ export function registerGetExpenses(_server: Server): void {
           throw new Error("Invalid response format from Brex API");
         }
         
-        // Filter valid expenses and apply payload limiter
+        // Filter valid expenses
         const validExpenses = expenses.items.filter(isExpense);
-        const { items, summaryApplied } = limitExpensesPayload(validExpenses as any, {
-          summaryOnly: params.summary_only,
-          fields: params.fields,
-          hardTokenLimit: 24000
-        });
-        logDebug(`Found ${validExpenses.length} valid expenses (returned: ${items.length}), summaryApplied=${summaryApplied}`);
+        logDebug(`Found ${validExpenses.length} valid expenses`);
+        
         const result = {
-          expenses: items,
+          expenses: validExpenses,
           meta: {
-            total_count: items.length,
-            requested_parameters: params,
-            summary_applied: summaryApplied
+            total_count: validExpenses.length,
+            requested_parameters: params
           }
         };
         return {
