@@ -67,7 +67,7 @@ export function registerGetAccountDetails(_server: Server): void {
         
         // Get additional account information if available
         try {
-          const transactions = await brexClient.getTransactions(params.accountId, JSON.stringify({ limit: 5 }));
+          const transactions = await brexClient.getTransactions(params.accountId, undefined, 5);
           const recentActivity = transactions.items.slice(0, 5);
           
           // Combine account details with recent activity

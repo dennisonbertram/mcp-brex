@@ -40,7 +40,7 @@ describe("getBudgetPrograms", () => {
     // Capture the tool handler directly by mocking registerToolHandler
     const handlers: Record<string, any> = {};
     jest.doMock("./index.js", () => ({
-      registerToolHandler: (name: string, handler: any) => {
+      registerToolHandler: (name: string, handler: any): void => {
         handlers[name] = handler;
         if (name === "get_budget_programs") {
           toolHandler = handler;

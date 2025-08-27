@@ -108,20 +108,106 @@ export class BrexClient {
   // Accounts API
   async getAccounts(): Promise<BrexPaginatedResponse<BrexAccount>> {
     try {
-      const response = await this.client.get('/v2/accounts/cash');
-      return response.data;
+      logDebug('Fetching all accounts (cash and card)');
+      
+      // Fetch both cash and card accounts in parallel
+      const [cashAccountsResponse, cardAccounts] = await Promise.all([
+        this.client.get('/v2/accounts/cash'),
+        this.getCardAccounts()
+      ]);
+      
+      const accounts: BrexAccount[] = [];
+      
+      // Add cash accounts
+      if (cashAccountsResponse.data && cashAccountsResponse.data.items) {
+        for (const cashAccount of cashAccountsResponse.data.items) {
+          accounts.push({
+            id: cashAccount.id,
+            name: cashAccount.name,
+            type: 'CASH' as const,
+            currency: cashAccount.current_balance.currency || 'USD',
+            balance: {
+              amount: cashAccount.current_balance.amount,
+              currency: cashAccount.current_balance.currency || 'USD'
+            },
+            status: cashAccount.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE'
+          });
+        }
+      }
+      
+      // Add card accounts
+      for (const cardAccount of cardAccounts) {
+        accounts.push({
+          id: cardAccount.id,
+          name: `Card Account ${cardAccount.id}`,
+          type: 'CARD' as const,
+          currency: cardAccount.current_balance?.currency || 'USD',
+          balance: {
+            amount: cardAccount.current_balance?.amount || 0,
+            currency: cardAccount.current_balance?.currency || 'USD'
+          },
+          status: cardAccount.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE'
+        });
+      }
+      
+      return {
+        items: accounts,
+        hasMore: false // We fetched all accounts
+      };
     } catch (error) {
-      this.handleApiError(error, 'GET', '/v2/accounts/cash');
+      this.handleApiError(error, 'GET', '/accounts');
       throw error;
     }
   }
 
   async getAccount(accountId: string): Promise<BrexAccount> {
     try {
-      const response = await this.client.get(`/v2/accounts/cash/${accountId}`);
-      return response.data;
+      // Determine account type based on ID prefix
+      if (accountId.startsWith('dpacc_')) {
+        // This is a cash account - use the cash endpoint
+        logDebug(`Fetching cash account ${accountId}`);
+        const response = await this.client.get(`/v2/accounts/cash/${accountId}`);
+        const cashAccount = response.data;
+        
+        // Transform to BrexAccount format
+        return {
+          id: cashAccount.id,
+          name: cashAccount.name,
+          type: 'CASH' as const,
+          currency: cashAccount.current_balance.currency || 'USD',
+          balance: {
+            amount: cashAccount.current_balance.amount,
+            currency: cashAccount.current_balance.currency || 'USD'
+          },
+          status: cashAccount.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE'
+        };
+      } else if (accountId.startsWith('cuacc_')) {
+        // This is a card account - get from the card accounts list
+        logDebug(`Fetching card account ${accountId}`);
+        const cardAccounts = await this.getCardAccounts();
+        const cardAccount = cardAccounts.find(account => account.id === accountId);
+        
+        if (!cardAccount) {
+          throw new Error(`Card account ${accountId} not found`);
+        }
+        
+        // Transform to BrexAccount format
+        return {
+          id: cardAccount.id,
+          name: `Card Account ${cardAccount.id}`, // Card accounts don't have names
+          type: 'CARD' as const,
+          currency: cardAccount.current_balance?.currency || 'USD',
+          balance: {
+            amount: cardAccount.current_balance?.amount || 0,
+            currency: cardAccount.current_balance?.currency || 'USD'
+          },
+          status: cardAccount.status === 'ACTIVE' ? 'ACTIVE' : 'INACTIVE'
+        };
+      } else {
+        throw new Error(`Unknown account ID format: ${accountId}. Expected account ID to start with 'dpacc_' (cash) or 'cuacc_' (card)`);
+      }
     } catch (error) {
-      this.handleApiError(error, 'GET', `/v2/accounts/cash/${accountId}`);
+      this.handleApiError(error, 'GET', `/account/${accountId}`);
       throw error;
     }
   }
@@ -307,14 +393,68 @@ export class BrexClient {
   ): Promise<BrexPaginatedResponse<BrexTransaction>> {
     try {
       logDebug(`Fetching transactions for account ${accountId}`);
-      // Try the statements endpoint as a fallback for transaction data
-      const response = await this.client.get(`/v2/accounts/cash/${accountId}/statements`, {
-        params: {
+      
+      if (accountId.startsWith('dpacc_')) {
+        // Cash account - use cash transactions endpoint
+        const response = await this.getCashTransactions(accountId, {
           cursor,
-          limit,
-        },
-      });
-      return response.data;
+          limit
+        });
+        
+        // Transform to BrexTransaction format
+        const transactions: BrexTransaction[] = response.items.map((tx) => ({
+          id: tx.id,
+          date: tx.posted_at_date,
+          description: tx.description,
+          amount: {
+            amount: tx.amount?.amount || 0,
+            currency: tx.amount?.currency || 'USD'
+          },
+          status: 'POSTED' as const,
+          type: (tx.amount?.amount || 0) >= 0 ? 'CREDIT' : 'DEBIT',
+          category: tx.type,
+          accountId: accountId
+        }));
+        
+        return {
+          items: transactions,
+          nextCursor: response.next_cursor,
+          hasMore: Boolean(response.next_cursor)
+        };
+      } else if (accountId.startsWith('cuacc_')) {
+        // Card account - use card transactions endpoint
+        const response = await this.getCardTransactions({
+          cursor,
+          limit
+        });
+        
+        // Transform to BrexTransaction format
+        const transactions: BrexTransaction[] = response.items.map((tx) => ({
+          id: tx.id,
+          date: tx.posted_at_date,
+          description: tx.description,
+          amount: {
+            amount: tx.amount.amount,
+            currency: tx.amount.currency || 'USD'
+          },
+          status: 'POSTED' as const,
+          type: 'DEBIT' as const, // Card transactions are typically debits
+          category: tx.type,
+          merchant: tx.merchant ? {
+            name: tx.merchant.raw_descriptor,
+            category: tx.merchant.mcc
+          } : undefined,
+          accountId: accountId
+        }));
+        
+        return {
+          items: transactions,
+          nextCursor: response.next_cursor,
+          hasMore: Boolean(response.next_cursor)
+        };
+      } else {
+        throw new Error(`Unknown account ID format: ${accountId}. Expected account ID to start with 'dpacc_' (cash) or 'cuacc_' (card)`);
+      }
     } catch (error) {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
         throw new Error(`Brex API authentication failed: Please check your API key in the .env file`);

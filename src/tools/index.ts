@@ -156,28 +156,24 @@ function registerListToolsHandler(server: Server): void {
         },
         {
           name: "get_expense",
-          description: "Get a single expense by ID. Example: {\"expense_id\":\"expense_123\",\"summary_only\":true,\"fields\":[\"id\",\"status\",\"merchant.raw_descriptor\"]}. Notes: Always include summary_only:true and a small fields list to minimize payload.",
+          description: "Get a single expense by ID. Returns the complete expense object. Example: {\"expense_id\":\"expense_123\",\"expand\":[\"merchant\"]}",
           inputSchema: {
             type: "object",
             properties: {
               expense_id: { type: "string", description: "Expense ID" },
-              expand: { type: "array", items: { type: "string" } },
-              summary_only: { type: "boolean" },
-              fields: { type: "array", items: { type: "string" } }
+              expand: { type: "array", items: { type: "string" } }
             },
             required: ["expense_id"]
           }
         },
         {
           name: "get_card_expense",
-          description: "Get a single card expense by ID. Example: {\"expense_id\":\"expense_123\",\"summary_only\":true,\"fields\":[\"id\",\"status\",\"merchant.raw_descriptor\"]}. Notes: Always include summary_only:true and fields.",
+          description: "Get a single card expense by ID. Returns the complete card expense object. Example: {\"expense_id\":\"expense_123\",\"expand\":[\"merchant\"]}",
           inputSchema: {
             type: "object",
             properties: {
               expense_id: { type: "string", description: "Card expense ID" },
-              expand: { type: "array", items: { type: "string" } },
-              summary_only: { type: "boolean" },
-              fields: { type: "array", items: { type: "string" } }
+              expand: { type: "array", items: { type: "string" } }
             },
             required: ["expense_id"]
           }
@@ -210,7 +206,7 @@ function registerListToolsHandler(server: Server): void {
         },
         {
           name: "get_card_transactions",
-          description: "LIST: Primary card transactions. Example: {\"limit\":10,\"posted_at_start\":\"2025-08-01T00:00:00Z\",\"summary_only\":true}. Notes: Always set limit<=50, include posted_at_start for recent window, and use fields to keep payload small.",
+          description: "LIST: Primary card transactions. Returns complete transaction objects. Example: {\"limit\":10,\"posted_at_start\":\"2025-08-01T00:00:00Z\",\"expand\":[\"merchant\"]}",
           inputSchema: {
             type: "object",
             properties: {
@@ -218,9 +214,7 @@ function registerListToolsHandler(server: Server): void {
               limit: { type: "number", description: "Items per page (default 50)" },
               user_ids: { type: "array", items: { type: "string" }, description: "Optional filter by user IDs" },
               posted_at_start: { type: "string", description: "ISO timestamp to start from" },
-              expand: { type: "array", items: { type: "string" }, description: "Fields to expand" },
-              summary_only: { type: "boolean", description: "Return summary fields only" },
-              fields: { type: "array", items: { type: "string" }, description: "Projection fields (dot-notation)" }
+              expand: { type: "array", items: { type: "string" }, description: "Fields to expand" }
             }
           }
         },
@@ -257,7 +251,7 @@ function registerListToolsHandler(server: Server): void {
         },
         {
           name: "get_expenses",
-          description: "LIST (single page): Expenses with optional filters. Example: {\"limit\":5,\"status\":\"APPROVED\",\"summary_only\":true}. Notes: Prefer small limit (<=10) and always include summary_only/fields. For larger sets, use get_all_expenses with date windows.",
+          description: "LIST (single page): Expenses with optional filters. Returns complete expense objects. Example: {\"limit\":5,\"status\":\"APPROVED\",\"expand\":[\"merchant\"]}",
           inputSchema: {
             type: "object",
             properties: {
@@ -280,14 +274,10 @@ function registerListToolsHandler(server: Server): void {
                 type: "number",
                 description: "Maximum number of expenses to return (default: 50)"
               },
-              summary_only: {
-                type: "boolean",
-                description: "Return summary fields only to reduce payload size"
-              },
-              fields: {
+              expand: {
                 type: "array",
                 items: { type: "string" },
-                description: "Optional list of fields to include (dot-notation)"
+                description: "Fields to expand (e.g., merchant, receipts)"
               }
             }
           }
@@ -426,7 +416,7 @@ function registerListToolsHandler(server: Server): void {
         },
         {
           name: "get_all_expenses",
-          description: "LIST: Paginated expenses with filters. Example: {\"page_size\":5,\"max_items\":5,\"status\":[\"APPROVED\"],\"summary_only\":true,\"window_days\":7,\"min_amount\":100}",
+          description: "LIST: Paginated expenses with filters. Returns complete expense objects. Example: {\"page_size\":5,\"max_items\":5,\"status\":[\"APPROVED\"],\"window_days\":7,\"min_amount\":100}",
           inputSchema: {
             type: "object",
             properties: {
@@ -482,21 +472,17 @@ function registerListToolsHandler(server: Server): void {
                 type: "number",
                 description: "Client-side maximum purchased_amount.amount filter"
               },
-              summary_only: {
-                type: "boolean",
-                description: "Return summary fields only to reduce payload size"
-              },
-              fields: {
+              expand: {
                 type: "array",
                 items: { type: "string" },
-                description: "Optional list of fields to include (dot-notation)"
+                description: "Fields to expand (e.g., merchant, receipts)"
               }
             }
           }
         },
         {
           name: "get_all_card_expenses",
-          description: "LIST: Paginated card expenses (no expense_type needed). Example: {\"page_size\":5,\"max_items\":5,\"summary_only\":true,\"window_days\":7,\"min_amount\":100}",
+          description: "LIST: Paginated card expenses (no expense_type needed). Returns complete card expense objects. Example: {\"page_size\":5,\"max_items\":5,\"window_days\":7,\"min_amount\":100}",
           inputSchema: {
             type: "object",
             properties: {
@@ -548,14 +534,10 @@ function registerListToolsHandler(server: Server): void {
                 type: "number",
                 description: "Client-side maximum purchased_amount.amount filter"
               },
-              summary_only: {
-                type: "boolean",
-                description: "Return summary fields only to reduce payload size"
-              },
-              fields: {
+              expand: {
                 type: "array",
                 items: { type: "string" },
-                description: "Optional list of fields to include (dot-notation)"
+                description: "Fields to expand (e.g., merchant, receipts)"
               }
             }
           }

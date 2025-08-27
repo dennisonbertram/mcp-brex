@@ -185,7 +185,7 @@ function validateParams(input: unknown): GetAllExpensesParams {
  */
 async function fetchAllExpenses(client: BrexClient, params: GetAllExpensesParams): Promise<unknown[]> {
   const pageSize = params.page_size || 50;
-  const maxItems = params.max_items || Infinity;
+  const maxItems = params.max_items || 100; // Default to reasonable limit instead of Infinity
   let allExpenses: unknown[] = [];
   
   const start = params.start_date ? new Date(params.start_date) : undefined;

@@ -19,8 +19,6 @@ jest.mock('../../utils/logger.js', () => ({
 
 describe('getBudgets tool', () => {
   let mockGetBudgets: jest.Mock;
-  let registerGetBudgets: any;
-  let BrexClient: any;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -35,12 +33,9 @@ describe('getBudgets tool', () => {
       }))
     }));
 
-    // Import after mocking
-    const clientModule = await import('../../services/brex/client.js');
-    BrexClient = clientModule.BrexClient;
-    
-    const toolModule = await import('../getBudgets.js');
-    registerGetBudgets = toolModule.registerGetBudgets;
+    // Import modules for side effects only
+    await import('../../services/brex/client.js');
+    await import('../getBudgets.js');
   });
 
   it('should return complete budget objects without any summary logic', async () => {
@@ -94,7 +89,7 @@ describe('getBudgets tool', () => {
     
     // Mock registerToolHandler to capture the handler
     jest.unstable_mockModule('../index.js', () => ({
-      registerToolHandler: (name: string, handler: any) => {
+      registerToolHandler: (name: string, handler: any): void => {
         handlers.set(name, handler);
       }
     }));
@@ -152,7 +147,7 @@ describe('getBudgets tool', () => {
     const mockServer = { setRequestHandler: jest.fn() };
     
     jest.unstable_mockModule('../index.js', () => ({
-      registerToolHandler: (name: string, handler: any) => {
+      registerToolHandler: (name: string, handler: any): void => {
         handlers.set(name, handler);
       }
     }));
@@ -184,7 +179,7 @@ describe('getBudgets tool', () => {
     const mockServer = { setRequestHandler: jest.fn() };
     
     jest.unstable_mockModule('../index.js', () => ({
-      registerToolHandler: (name: string, handler: any) => {
+      registerToolHandler: (name: string, handler: any): void => {
         handlers.set(name, handler);
       }
     }));
@@ -232,7 +227,7 @@ describe('getBudgets tool', () => {
     const mockServer = { setRequestHandler: jest.fn() };
     
     jest.unstable_mockModule('../index.js', () => ({
-      registerToolHandler: (name: string, handler: any) => {
+      registerToolHandler: (name: string, handler: any): void => {
         handlers.set(name, handler);
       }
     }));
@@ -271,7 +266,7 @@ describe('getBudgets tool', () => {
     const mockServer = { setRequestHandler: jest.fn() };
     
     jest.unstable_mockModule('../index.js', () => ({
-      registerToolHandler: (name: string, handler: any) => {
+      registerToolHandler: (name: string, handler: any): void => {
         handlers.set(name, handler);
       }
     }));
