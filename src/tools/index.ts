@@ -128,13 +128,11 @@ function registerListToolsHandler(server: Server): void {
         },
         {
           name: "get_spend_limit",
-          description: "Get a spend limit by ID (read-only). Example: {\"id\":\"sl_123\",\"summary_only\":true}",
+          description: "Get a spend limit by ID (read-only). Example: {\"id\":\"sl_123\"}",
           inputSchema: {
             type: "object",
             properties: {
-              id: { type: "string" },
-              summary_only: { type: "boolean" },
-              fields: { type: "array", items: { type: "string" } }
+              id: { type: "string" }
             },
             required: ["id"]
           }
