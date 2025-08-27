@@ -21,6 +21,33 @@ npm-debug.log*
 
 # Testing
 coverage/
+**/*.test.ts
+**/*.test.js
+**/__tests__/
+test_*.js
+test_*.sh
+*test*.json
+*_test_*.md
+*_TEST_*.md
+*_testing_*.md
+*_TESTING_*.md
+*_log.md
+*_LOG.md
+*_REPORT.md
+comprehensive_*.md
+COMPREHENSIVE_*.md
+DETAILED_*.md
+INDIVIDUAL_*.md
+TOOL_*.md
+RESPONSE_SIZE_*.md
+budget_tools_*.js
+manual_test.js
+*.txt
+
+# Development documentation
+DEVELOPMENT.md
+TESTING.md
+TODO.md
 
 # OS
 .DS_Store
