@@ -40,7 +40,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/dennisonbertram/brex-mcp-server.git"
+    "url": "git+https://github.com/dennisonbertram/brex-mcp-server.git"
   },
   "files": [
     "build/**/*",
