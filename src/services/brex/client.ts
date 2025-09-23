@@ -73,7 +73,27 @@ export class BrexClient {
       headers: {
         'Authorization': `Bearer ${appConfig.brex.apiKey}`,
         'Content-Type': 'application/json',
+        'User-Agent': 'mcp-brex/0.2.2 (+https://github.com/dennisonbertram/mcp-brex)'
       },
+    });
+
+    // Attach a request interceptor to add Idempotency-Key for writes if missing
+    this.client.interceptors.request.use((config) => {
+      const method = (config.method || 'get').toUpperCase();
+      // Generate a simple idempotency key for POST/PUT if caller didn't specify one
+      if ((method === 'POST' || method === 'PUT') && config.headers) {
+        const headers = config.headers as Record<string, string>;
+        if (!('Idempotency-Key' in headers) && !('idempotency-key' in headers)) {
+          try {
+            // Use crypto.randomUUID when available; otherwise, fallback
+            const key = (globalThis as any).crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+            headers['Idempotency-Key'] = key;
+          } catch {
+            headers['Idempotency-Key'] = `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+          }
+        }
+      }
+      return config;
     });
 
     // Add response interceptor for logging
@@ -86,7 +106,32 @@ export class BrexClient {
         });
         return response;
       },
-      (error) => {
+      async (error) => {
+        // Handle rate limiting with simple retry/backoff
+        const status = error?.response?.status;
+        const cfg: any = error?.config || {};
+        if (status === 429 && cfg) {
+          cfg.__retryCount = cfg.__retryCount || 0;
+          if (cfg.__retryCount < 2) {
+            cfg.__retryCount += 1;
+            let delayMs = 1000;
+            const ra = error.response.headers?.['retry-after'];
+            if (ra) {
+              const asInt = parseInt(ra, 10);
+              if (!Number.isNaN(asInt)) {
+                delayMs = asInt * 1000;
+              } else {
+                const raDate = Date.parse(ra);
+                if (!Number.isNaN(raDate)) {
+                  delayMs = Math.max(0, raDate - Date.now());
+                }
+              }
+            }
+            logWarn(`Brex API rate limited (429). Retrying in ${delayMs}ms...`, { url: cfg.url, attempt: cfg.__retryCount });
+            await new Promise((res) => setTimeout(res, delayMs));
+            return this.client.request(cfg);
+          }
+        }
         if (axios.isAxiosError(error) && error.response?.status === 401) {
           logError(`Brex API authentication failed: Invalid or expired API key. Check your BREX_API_KEY in .env file.`, {
             method: error.config?.method,

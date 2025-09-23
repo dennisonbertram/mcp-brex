@@ -5,7 +5,7 @@
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { ListResourcesRequestSchema } from "@modelcontextprotocol/sdk/types.js";
+import { ListResourcesRequestSchema, ReadResourceRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { registerAccountsResource } from "./accounts.js";
 import { registerExpensesResource } from "./expenses.js";
 import { registerCardExpensesResource } from "./cardExpenses.js";
@@ -24,6 +24,8 @@ import { logInfo, logDebug, logError } from "../utils/logger.js";
  * @param server The MCP server instance
  */
 export function registerResources(server: Server): void {
+  // Enable chained ReadResource handler so multiple modules can coexist
+  enableChainedReadResource(server);
   // Register resource handlers
   registerAccountsResource(server);
   registerExpensesResource(server);
@@ -126,14 +128,80 @@ function registerListResourcesHandler(server: Server): void {
       logDebug(`Responding with ${resources.length} available resources: ${resources.map(r => r.uri).join(', ')}`);
       logInfo("===== LIST RESOURCES END =====");
       
+      // Also advertise resource templates so clients can construct parameterized URIs
+      const resourceTemplates = [
+        {
+          uriTemplate: "brex://accounts/{id}",
+          name: "brex-account",
+          title: "Brex Account by ID",
+          description: "Fetch a specific Brex account by ID",
+          mimeType: "application/json"
+        },
+        {
+          uriTemplate: "brex://accounts/card/{id}",
+          name: "brex-card-account",
+          title: "Brex Card Account by ID",
+          description: "Fetch a specific Brex card account by ID (if supported)",
+          mimeType: "application/json"
+        },
+        {
+          uriTemplate: "brex://accounts/cash/{id}",
+          name: "brex-cash-account",
+          title: "Brex Cash Account by ID",
+          description: "Fetch a specific Brex cash account by ID",
+          mimeType: "application/json"
+        },
+        {
+          uriTemplate: "brex://transactions/cash/{id}",
+          name: "brex-cash-transactions",
+          title: "Cash Account Transactions",
+          description: "List transactions for a specific cash account",
+          mimeType: "application/json"
+        },
+        {
+          uriTemplate: "brex://expenses/{id}",
+          name: "brex-expense",
+          title: "Expense by ID",
+          description: "Fetch a specific expense by ID",
+          mimeType: "application/json"
+        },
+        {
+          uriTemplate: "brex://expenses/card/{id}",
+          name: "brex-card-expense",
+          title: "Card Expense by ID",
+          description: "Fetch a specific card expense by ID",
+          mimeType: "application/json"
+        },
+        {
+          uriTemplate: "brex://budgets/{id}",
+          name: "brex-budget",
+          title: "Budget by ID",
+          description: "Fetch a specific budget by ID",
+          mimeType: "application/json"
+        },
+        {
+          uriTemplate: "brex://spend_limits/{id}",
+          name: "brex-spend-limit",
+          title: "Spend Limit by ID",
+          description: "Fetch a specific spend limit by ID",
+          mimeType: "application/json"
+        },
+        {
+          uriTemplate: "brex://budget_programs/{id}",
+          name: "brex-budget-program",
+          title: "Budget Program by ID",
+          description: "Fetch a specific budget program by ID",
+          mimeType: "application/json"
+        }
+      ];
+
       // Return immediately without any async operations
-      return { resources };
+      return { resources, resourceTemplates } as any;
     } catch (error) {
       logError(`Error in ListResourcesRequestSchema handler: ${error instanceof Error ? error.message : String(error)}`);
       logError("Stack trace: " + (error instanceof Error ? error.stack : "Not available"));
       // Still need to return resources even if logging fails
-      return {
-        resources: [
+      const resourcesFallback = [
           {
             uri: "brex://accounts",
             mimeType: "application/json",
@@ -194,8 +262,60 @@ function registerListResourcesHandler(server: Server): void {
             name: "Brex Budget Programs",
             description: "List of all Brex budget programs"
           }
-        ]
+        ];
+
+      return {
+        resources: resourcesFallback
       };
     }
   });
-} 
+}
+
+/**
+ * Wraps server.setRequestHandler to collect multiple ReadResource handlers
+ * and install a single dispatcher that tries each until one returns a proper
+ * MCP response (contents or error). Handlers may return { handled: false } to skip.
+ */
+function enableChainedReadResource(server: Server): void {
+  const originalSetHandler = server.setRequestHandler.bind(server);
+  const readHandlers: Array<(request: any, extra?: any) => Promise<any>> = [];
+  let installed = false;
+
+  // @ts-ignore override method at runtime
+  server.setRequestHandler = ((schema: any, handler: any) => {
+    if (schema === ReadResourceRequestSchema) {
+      readHandlers.push(handler);
+      if (!installed) {
+        installed = true;
+        originalSetHandler(ReadResourceRequestSchema, async (request: any, extra?: any) => {
+          for (const h of readHandlers) {
+            // Each handler should either return a valid MCP response or { handled: false }
+            const result = await h(request, extra);
+            const r = result as any;
+            if (r && (Array.isArray(r.contents) || r.error)) {
+              return r; // handled
+            }
+            if (r && r.handled === false) {
+              continue; // try next
+            }
+          }
+          // Fallback guidance when no handler handled the URI
+          const uri = request?.params?.uri ?? "unknown://";
+          return {
+            contents: [{
+              uri,
+              mimeType: "application/json",
+              text: JSON.stringify({
+                error: "Unsupported resource URI",
+                guidance: "Use resources listed by list_resources or call tools for dynamic data",
+              }, null, 2)
+            }]
+          } as any;
+        });
+      }
+      return; // do not register individual read handlers directly
+    }
+    // Non-ReadResource schemas pass-through
+    return originalSetHandler(schema, handler);
+  }) as any;
+}

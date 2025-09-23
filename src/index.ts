@@ -39,6 +39,8 @@ const server = new Server(
       resources: {},
       tools: {},
       prompts: {},
+      // Advertise support for server-side logging notifications
+      logging: {},
     },
   }
 );

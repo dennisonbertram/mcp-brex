@@ -37,9 +37,13 @@ export function registerAccountsResource(server: Server): void {
   server.setRequestHandler(ReadResourceRequestSchema, async (request, _extra) => {
     const uri = request.params.uri;
     
-    // Check if this handler should process this URI
-    if (!uri.startsWith("brex://accounts")) {
-      return { handled: false }; // Not handled by this handler
+    // Check if this handler should process this URI. Only handle
+    // brex://accounts and brex://accounts/{id}. Defer nested paths
+    // like /card/* or /cash/* to their dedicated handlers.
+    if (!uri.startsWith("brex://accounts") ||
+        uri.startsWith("brex://accounts/card") ||
+        uri.startsWith("brex://accounts/cash")) {
+      return { handled: false } as any; // Not handled by this handler
     }
     
     logDebug(`Reading account resource: ${uri}`);

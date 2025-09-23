@@ -1,7 +1,7 @@
 import { config as dotenvConfig } from 'dotenv';
-import { logError } from '../utils/logger.js';
+import { logError, logWarn } from '../utils/logger.js';
 
-// Load environment variables
+// Load environment variables once at module import
 dotenvConfig();
 
 interface Config {
@@ -9,47 +9,29 @@ interface Config {
     apiKey: string;
     apiUrl: string;
   };
-  server: {
-    port: number;
-    nodeEnv: string;
-  };
-  rateLimit: {
-    requests: number;
-    windowMs: number;
-  };
 }
 
 function validateEnv(): Config {
-  const requiredEnvVars = [
-    'BREX_API_KEY',
-    'BREX_API_URL',
-    'PORT',
-    'NODE_ENV',
-    'RATE_LIMIT_REQUESTS',
-    'RATE_LIMIT_WINDOW_MS'
-  ];
-
-  const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
-  if (missingVars.length > 0) {
-    const error = new Error(`Missing required environment variables: ${missingVars.join(', ')}`);
+  const required: string[] = ['BREX_API_KEY'];
+  const missing = required.filter((name) => !process.env[name]);
+  if (missing.length) {
+    const error = new Error(`Missing required environment variables: ${missing.join(', ')}`);
     logError(error);
     throw error;
+  }
+
+  // Default to official Brex API base URL if not provided
+  const apiUrl = process.env.BREX_API_URL || 'https://platform.brexapis.com';
+  if (!process.env.BREX_API_URL) {
+    logWarn('BREX_API_URL not set; defaulting to https://platform.brexapis.com');
   }
 
   return {
     brex: {
       apiKey: process.env.BREX_API_KEY!,
-      apiUrl: process.env.BREX_API_URL!,
-    },
-    server: {
-      port: parseInt(process.env.PORT!, 10),
-      nodeEnv: process.env.NODE_ENV!,
-    },
-    rateLimit: {
-      requests: parseInt(process.env.RATE_LIMIT_REQUESTS!, 10),
-      windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS!, 10),
+      apiUrl,
     },
   };
 }
 
-export const appConfig = validateEnv(); 
+export const appConfig = validateEnv();
