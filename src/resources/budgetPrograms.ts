@@ -29,63 +29,48 @@ const budgetProgramsTemplate = new ResourceTemplate('brex://budget_programs{/id}
  * @param server - MCP server instance
  */
 export const registerBudgetProgramsResource = (server: Server): void => {
-  server.setRequestHandler(ReadResourceRequestSchema, async (request: unknown, _extra: unknown) => {
+  server.setRequestHandler(ReadResourceRequestSchema, async (request: unknown) => {
     const req = request as { params: { uri: string } };
     const { uri } = req.params;
-    
-    // Check if we can handle this URI
-    if (!uri.startsWith('brex://budget_programs')) {
-      return { handled: false };
-    }
-    
-    logDebug(`Handling budget program request for URI: ${uri}`);
-    
-    try {
-      const brexClient = getBrexClient();
-      // Use parse instead of match to get URI parameters
-      const params = budgetProgramsTemplate.parse(uri);
-      const id = params.id;
-      
-      if (id) {
-        // Get single budget program
-        logDebug(`Fetching single budget program with ID: ${id}`);
-        const budgetProgram = await brexClient.getBudgetProgram(id);
-        
-        if (!budgetProgram || !isBudgetProgram(budgetProgram)) {
-          throw new Error(`Invalid budget program data received for ID: ${id}`);
-        }
-        
-        const qp = parseQueryParams(uri);
-        const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
-        const summaryOnly = qp.summary_only === 'true';
-        const summarized = summaryOnly || estimateTokens(JSON.stringify(budgetProgram)) > 24000;
-        const out = project(budgetProgram, fields);
-        return { handled: true, resource: summarized ? out : budgetProgram };
-      } else {
-        // List budget programs with pagination
-        logDebug('Fetching budget programs list');
-        const queryParams = parseQueryParams(uri);
-        const budgetProgramsResponse = await brexClient.getBudgetPrograms({
-          cursor: queryParams.cursor,
-          limit: queryParams.limit ? parseInt(queryParams.limit, 10) : undefined,
-          budget_program_status: queryParams.budget_program_status as any
-        });
-        
-        const qp = parseQueryParams(uri);
-        const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
-        const summaryOnly = qp.summary_only === 'true';
-        const summarized = summaryOnly || estimateTokens(JSON.stringify(budgetProgramsResponse)) > 24000;
-        const projected = fields && fields.length ? budgetProgramsResponse.items.map((b: any) => project(b, fields)) : budgetProgramsResponse.items;
-        return { handled: true, resource: summarized ? { ...budgetProgramsResponse, items: projected } : budgetProgramsResponse };
-      }
-    } catch (error) {
-      logError(`Error handling budget program request: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
-    }
+    if (!canHandleBudgetProgramsUri(uri)) return { handled: false } as any;
+    return await readBudgetProgramsUri(uri);
   });
 };
 
-export default registerBudgetProgramsResource; 
+export function canHandleBudgetProgramsUri(uri: string): boolean {
+  return uri.startsWith('brex://budget_programs');
+}
+
+export async function readBudgetProgramsUri(uri: string): Promise<any> {
+  logDebug(`Handling budget program request for URI: ${uri}`);
+  const brexClient = getBrexClient();
+  const params = budgetProgramsTemplate.parse(uri);
+  const id = params.id;
+  if (id) {
+    const budgetProgram = await brexClient.getBudgetProgram(id);
+    if (!budgetProgram || !isBudgetProgram(budgetProgram)) throw new Error(`Invalid budget program data received for ID: ${id}`);
+    const qp = parseQueryParams(uri);
+    const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+    const summaryOnly = qp.summary_only === 'true';
+    const summarized = summaryOnly || estimateTokens(JSON.stringify(budgetProgram)) > 24000;
+    const out = fields && fields.length ? project(budgetProgram, fields) : budgetProgram;
+    return { contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(summarized ? out : budgetProgram, null, 2) }] } as any;
+  } else {
+    const queryParams = parseQueryParams(uri);
+    const budgetProgramsResponse = await brexClient.getBudgetPrograms({
+      cursor: queryParams.cursor,
+      limit: queryParams.limit ? parseInt(queryParams.limit, 10) : undefined,
+      budget_program_status: queryParams.budget_program_status as any
+    });
+    const qp = parseQueryParams(uri);
+    const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+    const summaryOnly = qp.summary_only === 'true';
+    const summarized = summaryOnly || estimateTokens(JSON.stringify(budgetProgramsResponse)) > 24000;
+    const projected = fields && fields.length ? budgetProgramsResponse.items.map((b: any) => project(b, fields)) : budgetProgramsResponse.items;
+    const out = summarized ? { ...budgetProgramsResponse, items: projected } : budgetProgramsResponse;
+    return { contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(out, null, 2) }] } as any;
+  }
+}
 
 function project(src: any, fields?: string[]): any {
   if (!fields || !fields.length) return src;

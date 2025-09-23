@@ -188,7 +188,54 @@ export function registerTransactionsResource(server: Server): void {
       }
     };
   });
-} 
+}
+
+export function canHandleTransactionsUri(uri: string): boolean {
+  return uri.startsWith("brex://transactions");
+}
+
+export async function readTransactionsUri(uri: string): Promise<any> {
+  const brexClient = getBrexClient();
+  // Card transactions
+  if (uri.includes("transactions/card/primary")) {
+    const qp = parseQueryParams(uri);
+    const options = {
+      cursor: qp.cursor || undefined,
+      limit: qp.limit ? parseInt(qp.limit, 10) : undefined,
+      posted_at_start: qp.posted_at_start || undefined,
+      user_ids: qp.user_id ? [qp.user_id] : undefined,
+      expand: qp.expand ? [qp.expand] : undefined
+    } as any;
+    const transactions = await brexClient.getCardTransactions(options);
+    if (!transactions.items || !Array.isArray(transactions.items)) throw new Error('Invalid card transactions data received');
+    for (const t of transactions.items) { if (!isCardTransaction(t)) throw new Error('Invalid card transaction data received'); }
+    const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+    const summaryOnly = qp.summary_only === 'true';
+    const tooBig = estimateTokens(JSON.stringify(transactions.items)) > 24000;
+    const summarized = summaryOnly || tooBig;
+    const projected = summarized && fields && fields.length ? transactions.items.map(t => project(t, fields)) : (summarized ? transactions.items.map(t => project(t, DEFAULT_TX_FIELDS)) : transactions.items);
+    const result = { items: projected, pagination: { hasMore: !!(transactions as any).next_cursor, nextCursor: (transactions as any).next_cursor }, meta: { summary_applied: summarized } };
+    return { contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(result, null, 2) }] } as any;
+  }
+  // Cash transactions
+  if (uri.includes("transactions/cash")) {
+    const params = cashTransactionsTemplate.parse(uri);
+    if (!params.id) return { error: { message: 'Account ID is required for cash transactions endpoint', code: 400 } } as any;
+    const qp = parseQueryParams(uri);
+    const options = { cursor: qp.cursor || undefined, limit: qp.limit ? parseInt(qp.limit, 10) : undefined, posted_at_start: qp.posted_at_start || undefined } as any;
+    const transactions = await brexClient.getCashTransactions(params.id, options);
+    if (!transactions.items || !Array.isArray(transactions.items)) throw new Error('Invalid cash transactions data received');
+    for (const t of transactions.items) { if (!isCashTransaction(t)) throw new Error('Invalid cash transaction data received'); }
+    const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+    const summaryOnly = qp.summary_only === 'true';
+    const tooBig = estimateTokens(JSON.stringify(transactions.items)) > 24000;
+    const summarized = summaryOnly || tooBig;
+    const projected = summarized && fields && fields.length ? transactions.items.map(t => project(t, fields)) : (summarized ? transactions.items.map(t => project(t, DEFAULT_CASH_TX_FIELDS)) : transactions.items);
+    const result = { items: projected, pagination: { hasMore: !!(transactions as any).next_cursor, nextCursor: (transactions as any).next_cursor }, meta: { summary_applied: summarized } };
+    return { contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(result, null, 2) }] } as any;
+  }
+  return { error: { message: `Unsupported transactions endpoint: ${uri}`, code: 400 } } as any;
+}
 
 const DEFAULT_TX_FIELDS = [
   'id',

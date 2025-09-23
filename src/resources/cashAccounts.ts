@@ -212,7 +212,62 @@ export function registerCashAccountsResource(server: Server): void {
       }
     }
   });
-} 
+}
+
+export function canHandleCashAccountsUri(uri: string): boolean {
+  return uri.startsWith("brex://accounts/cash");
+}
+
+export async function readCashAccountsUri(uri: string): Promise<any> {
+  const brexClient = getBrexClient();
+  // Primary cash account
+  if (uri.includes("cash/primary") && !uri.includes("statements")) {
+    const account = await brexClient.getPrimaryCashAccount();
+    if (!isCashAccount(account)) throw new Error('Invalid primary cash account data received');
+    return { contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(account, null, 2) }] } as any;
+  }
+  // Statements
+  if (uri.includes("/statements")) {
+    const statementsParams = cashAccountsStatementsTemplate.parse(uri);
+    if (!statementsParams.id) {
+      return { error: { message: "Account ID is required for statements endpoint", code: 400 } } as any;
+    }
+    const qp = parseQueryParams(uri);
+    const cursor = qp.cursor || undefined;
+    const limit = qp.limit ? parseInt(qp.limit, 10) : undefined;
+    const statements = await brexClient.getCashAccountStatements(statementsParams.id, cursor, limit);
+    if (!statements.items || !Array.isArray(statements.items)) throw new Error('Invalid statements data received');
+    for (const statement of statements.items) {
+      if (!isStatement(statement)) throw new Error('Invalid statement data received');
+    }
+    const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+    const summaryOnly = qp.summary_only === 'true';
+    const tooBig = estimateTokens(JSON.stringify(statements.items)) > 24000;
+    const summarized = summaryOnly || tooBig;
+    const projected = summarized && fields && fields.length ? statements.items.map(t => project(t, fields)) : (summarized ? statements.items.map(t => project(t, DEFAULT_STMT_FIELDS)) : statements.items);
+    const result = { items: projected, pagination: { hasMore: !!(statements as any).next_cursor, nextCursor: (statements as any).next_cursor }, meta: { summary_applied: summarized } };
+    return { contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(result, null, 2) }] } as any;
+  }
+  // List or single cash account
+  const params = cashAccountsTemplate.parse(uri);
+  if (!params.id) {
+    const accounts = await brexClient.getCashAccounts();
+    if (!accounts.items || !Array.isArray(accounts.items)) throw new Error('Invalid cash accounts data received');
+    for (const account of accounts.items) { if (!isCashAccount(account)) throw new Error('Invalid cash account data received'); }
+    const result = { items: accounts.items, pagination: { hasMore: !!accounts.next_cursor, nextCursor: accounts.next_cursor } };
+    return { contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(result, null, 2) }] } as any;
+  } else {
+    const account = await brexClient.getCashAccountById(params.id);
+    if (!isCashAccount(account)) throw new Error('Invalid cash account data received');
+    const qp = parseQueryParams(uri);
+    const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+    const summaryOnly = qp.summary_only === 'true';
+    const tooBig = estimateTokens(JSON.stringify(account)) > 24000;
+    const summarized = summaryOnly || tooBig;
+    const projected = summarized && fields && fields.length ? project(account, fields) : account;
+    return { contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(projected, null, 2) }] } as any;
+  }
+}
 
 const DEFAULT_STMT_FIELDS = [
   'id',

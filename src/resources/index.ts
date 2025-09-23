@@ -9,12 +9,12 @@ import { ListResourcesRequestSchema, ReadResourceRequestSchema } from "@modelcon
 import { registerAccountsCapabilities, canHandleAccountsUri, readAccountsUri } from "./accounts.js";
 import { registerExpensesResource } from "./expenses.js";
 import { registerCardExpensesResource } from "./cardExpenses.js";
-import { registerBudgetsResource } from "./budgets.js";
-import { registerSpendLimitsResource } from "./spendLimits.js";
-import { registerBudgetProgramsResource } from "./budgetPrograms.js";
-import { registerCardAccountsResource, canHandleCardAccountsUri, readCardAccountsUri } from "./cardAccounts.js";
-import { registerCashAccountsResource } from "./cashAccounts.js";
-import { registerTransactionsResource } from "./transactions.js";
+import { registerBudgetsResource, canHandleBudgetsUri, readBudgetsUri } from "./budgets.js";
+import { registerSpendLimitsResource, canHandleSpendLimitsUri, readSpendLimitsUri } from "./spendLimits.js";
+import { registerBudgetProgramsResource, canHandleBudgetProgramsUri, readBudgetProgramsUri } from "./budgetPrograms.js";
+import { registerCardAccountsCapabilities, canHandleCardAccountsUri, readCardAccountsUri } from "./cardAccounts.js";
+import { registerCashAccountsResource, canHandleCashAccountsUri, readCashAccountsUri } from "./cashAccounts.js";
+import { registerTransactionsResource, canHandleTransactionsUri, readTransactionsUri } from "./transactions.js";
 import { registerResourcesRouter, canHandleExpensesUri, readExpensesUri, canHandleCardExpensesUri, readCardExpensesUri } from "./router.js";
 import { registerUsageResource, canHandleUsageUri, readUsageUri } from "./usage.js";
 import { logInfo, logDebug, logError } from "../utils/logger.js";
@@ -35,6 +35,11 @@ export function registerResources(server: Server): void {
     if (canHandleExpensesUri(uri)) return await readExpensesUri(uri);
     if (canHandleCardAccountsUri(uri)) return await readCardAccountsUri(uri);
     if (canHandleAccountsUri(uri)) return await readAccountsUri(uri);
+    if (canHandleCashAccountsUri(uri)) return await readCashAccountsUri(uri);
+    if (canHandleTransactionsUri(uri)) return await readTransactionsUri(uri);
+    if (canHandleBudgetsUri(uri)) return await readBudgetsUri(uri);
+    if (canHandleSpendLimitsUri(uri)) return await readSpendLimitsUri(uri);
+    if (canHandleBudgetProgramsUri(uri)) return await readBudgetProgramsUri(uri);
     return { handled: false } as any;
   });
   // Register resource handlers
@@ -45,7 +50,7 @@ export function registerResources(server: Server): void {
   registerBudgetsResource(server);
   registerSpendLimitsResource(server);
   registerBudgetProgramsResource(server);
-  registerCardAccountsResource(server);
+  registerCardAccountsCapabilities(server);
   registerCashAccountsResource(server);
   registerTransactionsResource(server);
   // Router last to ensure we return proper 'contents' arrays for expenses URIs

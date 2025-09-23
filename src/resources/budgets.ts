@@ -29,64 +29,49 @@ const budgetsTemplate = new ResourceTemplate('brex://budgets{/id}');
  * @param server - MCP server instance
  */
 export const registerBudgetsResource = (server: Server): void => {
-  server.setRequestHandler(ReadResourceRequestSchema, async (request: unknown, _extra: unknown) => {
+  server.setRequestHandler(ReadResourceRequestSchema, async (request: unknown) => {
     const req = request as { params: { uri: string } };
     const { uri } = req.params;
-    
-    // Check if we can handle this URI
-    if (!uri.startsWith('brex://budgets')) {
-      return { handled: false };
-    }
-    
-    logDebug(`Handling budget request for URI: ${uri}`);
-    
-    try {
-      const brexClient = getBrexClient();
-      // Use parse instead of match to get URI parameters
-      const params = budgetsTemplate.parse(uri);
-      const id = params.id;
-      
-      if (id) {
-        // Get single budget
-        logDebug(`Fetching single budget with ID: ${id}`);
-        const budget = await brexClient.getBudget(id);
-        
-        if (!budget || !isBudget(budget)) {
-          throw new Error(`Invalid budget data received for ID: ${id}`);
-        }
-        
-        const qp = parseQueryParams(uri);
-        const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
-        const summaryOnly = qp.summary_only === 'true';
-        const out = project(budget, fields);
-        const summarized = summaryOnly || estimateTokens(JSON.stringify(budget)) > 24000;
-        return { handled: true, resource: summarized ? out : budget };
-      } else {
-        // List budgets with pagination
-        logDebug('Fetching budget list');
-        const queryParams = parseQueryParams(uri);
-        const budgetsResponse = await brexClient.getBudgets({
-          cursor: queryParams.cursor,
-          limit: queryParams.limit ? parseInt(queryParams.limit, 10) : undefined,
-          parent_budget_id: queryParams.parent_budget_id,
-          spend_budget_status: queryParams.spend_budget_status as any
-        });
-        
-        const qp = parseQueryParams(uri);
-        const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
-        const summaryOnly = qp.summary_only === 'true';
-        const summarized = summaryOnly || estimateTokens(JSON.stringify(budgetsResponse)) > 24000;
-        const projected = fields && fields.length ? budgetsResponse.items.map((b: any) => project(b, fields)) : budgetsResponse.items;
-        return { handled: true, resource: summarized ? { ...budgetsResponse, items: projected } : budgetsResponse };
-      }
-    } catch (error) {
-      logError(`Error handling budget request: ${error instanceof Error ? error.message : String(error)}`);
-      throw error;
-    }
+    if (!canHandleBudgetsUri(uri)) return { handled: false } as any;
+    return await readBudgetsUri(uri);
   });
 };
 
-export default registerBudgetsResource; 
+export function canHandleBudgetsUri(uri: string): boolean {
+  return uri.startsWith('brex://budgets');
+}
+
+export async function readBudgetsUri(uri: string): Promise<any> {
+  logDebug(`Handling budget request for URI: ${uri}`);
+  const brexClient = getBrexClient();
+  const params = budgetsTemplate.parse(uri);
+  const id = params.id;
+  if (id) {
+    const budget = await brexClient.getBudget(id);
+    if (!budget || !isBudget(budget)) throw new Error(`Invalid budget data received for ID: ${id}`);
+    const qp = parseQueryParams(uri);
+    const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+    const summaryOnly = qp.summary_only === 'true';
+    const summarized = summaryOnly || estimateTokens(JSON.stringify(budget)) > 24000;
+    const out = fields && fields.length ? project(budget, fields) : budget;
+    return { contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(summarized ? out : budget, null, 2) }] } as any;
+  } else {
+    const queryParams = parseQueryParams(uri);
+    const budgetsResponse = await brexClient.getBudgets({
+      cursor: queryParams.cursor,
+      limit: queryParams.limit ? parseInt(queryParams.limit, 10) : undefined,
+      parent_budget_id: queryParams.parent_budget_id,
+      spend_budget_status: queryParams.spend_budget_status as any
+    });
+    const qp = parseQueryParams(uri);
+    const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+    const summaryOnly = qp.summary_only === 'true';
+    const summarized = summaryOnly || estimateTokens(JSON.stringify(budgetsResponse)) > 24000;
+    const projected = fields && fields.length ? budgetsResponse.items.map((b: any) => project(b, fields)) : budgetsResponse.items;
+    const out = summarized ? { ...budgetsResponse, items: projected } : budgetsResponse;
+    return { contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(out, null, 2) }] } as any;
+  }
+}
 
 function project(src: any, fields?: string[]): any {
   if (!fields || !fields.length) return src;
