@@ -72,4 +72,49 @@ export function registerResourcesRouter(server: Server): void {
   });
 }
 
+// Central-dispatch compatible helpers
+export function canHandleExpensesUri(uri: string): boolean {
+  return uri.startsWith("brex://expenses") && !uri.includes("/card");
+}
+
+export async function readExpensesUri(uri: string): Promise<any> {
+  const brex = getClient();
+  const params = expensesTemplate.parse(uri);
+  const qp = parseQueryParams(uri);
+  const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+  const summaryOnly = qp.summary_only === 'true';
+  if (!params.id) {
+    const req: ListExpensesParams = { limit: 50, expand: ['merchant','budget'] };
+    const resp = await brex.getExpenses(req);
+    const limited = limitExpensesPayload(resp.items as any, { summaryOnly, fields, hardTokenLimit: 24000 });
+    return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(limited.items, null, 2) }] } as any;
+  } else {
+    const exp = await brex.getExpense(params.id, { expand: ['merchant','budget','location','department','receipts.download_uris'], load_custom_fields: true });
+    if (!isExpense(exp)) throw new Error('Invalid expense');
+    const limited = limitExpensesPayload([exp] as any, { summaryOnly, fields, hardTokenLimit: 24000 });
+    return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(limited.items[0] || {}, null, 2) }] } as any;
+  }
+}
+
+export function canHandleCardExpensesUri(uri: string): boolean {
+  return uri.startsWith("brex://expenses/card");
+}
+
+export async function readCardExpensesUri(uri: string): Promise<any> {
+  const brex = getClient();
+  const params = cardExpensesTemplate.parse(uri);
+  const qp = parseQueryParams(uri);
+  const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+  const summaryOnly = qp.summary_only === 'true';
+  if (!params.id) {
+    const req: ListExpensesParams = { limit: 50, expand: ['merchant','budget'], expense_type: [ExpenseType.CARD] };
+    const resp = await brex.getCardExpenses(req);
+    const limited = limitExpensesPayload(resp.items as any, { summaryOnly, fields, hardTokenLimit: 24000 });
+    return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(limited.items, null, 2) }] } as any;
+  } else {
+    const exp = await brex.getCardExpense(params.id, { expand: ['merchant','budget','location','department','receipts.download_uris'], load_custom_fields: true });
+    const limited = limitExpensesPayload([exp] as any, { summaryOnly, fields, hardTokenLimit: 24000 });
+    return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(limited.items[0] || {}, null, 2) }] } as any;
+  }
+}
 

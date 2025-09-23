@@ -5,7 +5,6 @@
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { ReadResourceRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { ResourceTemplate } from "../models/resourceTemplate.js";
 import { logDebug, logError } from "../utils/logger.js";
 import { BrexClient } from "../services/brex/client.js";
@@ -19,11 +18,8 @@ function getBrexClient(): BrexClient {
 // Define account resource template
 const accountsTemplate = new ResourceTemplate("brex://accounts{/id}");
 
-/**
- * Registers the accounts resource handler with the server
- * @param server The MCP server instance
- */
-export function registerAccountsResource(server: Server): void {
+/** Capability registration only */
+export function registerAccountsCapabilities(server: Server): void {
   server.registerCapabilities({
     resources: {
       "brex://accounts{/id}": {
@@ -32,68 +28,48 @@ export function registerAccountsResource(server: Server): void {
       }
     }
   });
+}
 
-  // Use the standard approach with setRequestHandler
-  server.setRequestHandler(ReadResourceRequestSchema, async (request, _extra) => {
-    const uri = request.params.uri;
-    
-    // Check if this handler should process this URI. Only handle
-    // brex://accounts and brex://accounts/{id}. Defer nested paths
-    // like /card/* or /cash/* to their dedicated handlers.
-    if (!uri.startsWith("brex://accounts") ||
-        uri.startsWith("brex://accounts/card") ||
-        uri.startsWith("brex://accounts/cash")) {
-      return { handled: false } as any; // Not handled by this handler
+/** Predicate: whether this module should handle the URI */
+export function canHandleAccountsUri(uri: string): boolean {
+  return uri.startsWith("brex://accounts") &&
+         !uri.startsWith("brex://accounts/card") &&
+         !uri.startsWith("brex://accounts/cash");
+}
+
+/** Pure handler for accounts URIs */
+export async function readAccountsUri(uri: string): Promise<any> {
+  logDebug(`Reading account resource: ${uri}`);
+  const brexClient = getBrexClient();
+  const params = accountsTemplate.parse(uri);
+
+  if (!params.id) {
+    try {
+      logDebug("Fetching all accounts from Brex API");
+      const accounts = await brexClient.getAccounts();
+      logDebug(`Successfully fetched ${accounts.items.length} accounts`);
+      return {
+        contents: [{ uri, mimeType: "application/json", text: JSON.stringify(accounts.items, null, 2) }]
+      };
+    } catch (error) {
+      logError(`Failed to fetch accounts: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
     }
-    
-    logDebug(`Reading account resource: ${uri}`);
-    
-    // Get Brex client
-    const brexClient = getBrexClient();
-    
-    // Parse parameters from URI
-    const params = accountsTemplate.parse(uri);
-    
-    if (!params.id) {
-      // List all accounts
-      try {
-        logDebug("Fetching all accounts from Brex API");
-        const accounts = await brexClient.getAccounts();
-        logDebug(`Successfully fetched ${accounts.items.length} accounts`);
-        return {
-          contents: [{
-            uri: uri,
-            mimeType: "application/json",
-            text: JSON.stringify(accounts.items, null, 2)
-          }]
-        };
-      } catch (error) {
-        logError(`Failed to fetch accounts: ${error instanceof Error ? error.message : String(error)}`);
-        throw error;
+  } else {
+    try {
+      logDebug(`Fetching account ${params.id} from Brex API`);
+      const account = await brexClient.getAccount(params.id);
+      if (!isBrexAccount(account)) {
+        logError(`Invalid account data received for account ID: ${params.id}`);
+        throw new Error('Invalid account data received');
       }
-    } else {
-      // Get specific account
-      try {
-        logDebug(`Fetching account ${params.id} from Brex API`);
-        const account = await brexClient.getAccount(params.id);
-        
-        if (!isBrexAccount(account)) {
-          logError(`Invalid account data received for account ID: ${params.id}`);
-          throw new Error('Invalid account data received');
-        }
-        
-        logDebug(`Successfully fetched account ${params.id}`);
-        return {
-          contents: [{
-            uri: uri,
-            mimeType: "application/json",
-            text: JSON.stringify(account, null, 2)
-          }]
-        };
-      } catch (error) {
-        logError(`Failed to fetch account ${params.id}: ${error instanceof Error ? error.message : String(error)}`);
-        throw error;
-      }
+      logDebug(`Successfully fetched account ${params.id}`);
+      return {
+        contents: [{ uri, mimeType: "application/json", text: JSON.stringify(account, null, 2) }]
+      };
+    } catch (error) {
+      logError(`Failed to fetch account ${params.id}: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
     }
-  });
-} 
+  }
+}

@@ -6,17 +6,17 @@
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { ListResourcesRequestSchema, ReadResourceRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import { registerAccountsResource } from "./accounts.js";
+import { registerAccountsCapabilities, canHandleAccountsUri, readAccountsUri } from "./accounts.js";
 import { registerExpensesResource } from "./expenses.js";
 import { registerCardExpensesResource } from "./cardExpenses.js";
 import { registerBudgetsResource } from "./budgets.js";
 import { registerSpendLimitsResource } from "./spendLimits.js";
 import { registerBudgetProgramsResource } from "./budgetPrograms.js";
-import { registerCardAccountsResource } from "./cardAccounts.js";
+import { registerCardAccountsResource, canHandleCardAccountsUri, readCardAccountsUri } from "./cardAccounts.js";
 import { registerCashAccountsResource } from "./cashAccounts.js";
 import { registerTransactionsResource } from "./transactions.js";
-import { registerResourcesRouter } from "./router.js";
-import { registerUsageResource } from "./usage.js";
+import { registerResourcesRouter, canHandleExpensesUri, readExpensesUri, canHandleCardExpensesUri, readCardExpensesUri } from "./router.js";
+import { registerUsageResource, canHandleUsageUri, readUsageUri } from "./usage.js";
 import { logInfo, logDebug, logError } from "../utils/logger.js";
 
 /**
@@ -26,8 +26,20 @@ import { logInfo, logDebug, logError } from "../utils/logger.js";
 export function registerResources(server: Server): void {
   // Enable chained ReadResource handler so multiple modules can coexist
   enableChainedReadResource(server);
+
+  // Central dispatcher (incremental): ordered routes, most specific first
+  server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+    const uri = request.params.uri;
+    if (canHandleUsageUri(uri)) return await readUsageUri();
+    if (canHandleCardExpensesUri(uri)) return await readCardExpensesUri(uri);
+    if (canHandleExpensesUri(uri)) return await readExpensesUri(uri);
+    if (canHandleCardAccountsUri(uri)) return await readCardAccountsUri(uri);
+    if (canHandleAccountsUri(uri)) return await readAccountsUri(uri);
+    return { handled: false } as any;
+  });
   // Register resource handlers
-  registerAccountsResource(server);
+  // Capabilities for accounts resources
+  registerAccountsCapabilities(server);
   registerExpensesResource(server);
   registerCardExpensesResource(server);
   registerBudgetsResource(server);

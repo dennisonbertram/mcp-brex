@@ -144,4 +144,16 @@ export function registerUsageResource(server: Server): void {
   });
 }
 
+export function canHandleUsageUri(uri: string): boolean {
+  return uri === USAGE_URI;
+}
+
+export async function readUsageUri(): Promise<any> {
+  const body = buildUsageDoc();
+  return {
+    contents: [
+      { uri: USAGE_URI, mimeType: "application/json", text: JSON.stringify(body, null, 2) }
+    ]
+  } as any;
+}
 

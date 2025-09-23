@@ -154,7 +154,61 @@ export function registerCardAccountsResource(server: Server): void {
       };
     }
   });
-} 
+}
+
+export function canHandleCardAccountsUri(uri: string): boolean {
+  return uri.startsWith("brex://accounts/card");
+}
+
+export async function readCardAccountsUri(uri: string): Promise<any> {
+  const brexClient = getBrexClient();
+  // Primary statements
+  if (uri.includes("primary/statements")) {
+    const qp = parseQueryParams(uri);
+    const cursor = qp.cursor || undefined;
+    const limit = qp.limit ? parseInt(qp.limit, 10) : undefined;
+    const statements = await brexClient.getPrimaryCardStatements(cursor, limit);
+    if (!statements.items || !Array.isArray(statements.items)) {
+      throw new Error('Invalid statements data received');
+    }
+    for (const statement of statements.items) {
+      if (!isStatement(statement)) {
+        logError(`Invalid statement data received: ${JSON.stringify(statement)}`);
+        throw new Error('Invalid statement data received');
+      }
+    }
+    const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+    const summaryOnly = qp.summary_only === 'true';
+    const tooBig = estimateTokens(JSON.stringify(statements.items)) > 24000;
+    const summarized = summaryOnly || tooBig;
+    const projected = summarized && fields && fields.length ? statements.items.map(t => project(t, fields)) : (summarized ? statements.items.map(t => project(t, DEFAULT_STMT_FIELDS)) : statements.items);
+    const result = {
+      items: projected,
+      pagination: {
+        hasMore: !!(statements as any).next_cursor,
+        nextCursor: (statements as any).next_cursor
+      },
+      meta: { summary_applied: summarized }
+    };
+    return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(result, null, 2) }] } as any;
+  }
+  // Card accounts list
+  const params = cardAccountsTemplate.parse(uri);
+  if (!params.id) {
+    const accounts = await brexClient.getCardAccounts();
+    if (!Array.isArray(accounts)) {
+      throw new Error('Invalid card accounts data received');
+    }
+    const qp = parseQueryParams(uri);
+    const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+    const summaryOnly = qp.summary_only === 'true';
+    const tooBig = estimateTokens(JSON.stringify(accounts)) > 24000;
+    const summarized = summaryOnly || tooBig;
+    const projected = summarized && fields && fields.length ? accounts.map((a: any) => project(a, fields)) : accounts;
+    return { contents: [{ uri, mimeType: "application/json", text: JSON.stringify(projected, null, 2) }] } as any;
+  }
+  return { error: { message: "Getting specific card account by ID is not supported by the Brex API", code: 400 } } as any;
+}
 
 const DEFAULT_STMT_FIELDS = [
   'id',
