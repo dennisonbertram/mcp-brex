@@ -5,7 +5,6 @@
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
-import { ReadResourceRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { ResourceTemplate } from "../models/resourceTemplate.js";
 import { logDebug, logError } from "../utils/logger.js";
 import { BrexClient } from "../services/brex/client.js";
@@ -21,11 +20,8 @@ function getBrexClient(): BrexClient {
 // Define expenses resource template
 const expensesTemplate = new ResourceTemplate("brex://expenses{/id}");
 
-/**
- * Registers the expenses resource handler with the server
- * @param server The MCP server instance
- */
-export function registerExpensesResource(server: Server): void {
+/** Capability only (optional) */
+export function registerExpensesCapabilities(server: Server): void {
   server.registerCapabilities({
     resources: {
       "brex://expenses{/id}": {
@@ -34,79 +30,41 @@ export function registerExpensesResource(server: Server): void {
       }
     }
   });
+}
 
-  // Use the standard approach with setRequestHandler
-  server.setRequestHandler(ReadResourceRequestSchema, async (request, _extra) => {
-    const uri = request.params.uri;
-    
-    // Check if this handler should process this URI
-    if (!uri.startsWith("brex://expenses") || uri.includes("/card")) {
-      return { handled: false }; // Not handled by this handler (card expenses have their own handler)
+export function canHandleExpensesUri(uri: string): boolean {
+  return uri.startsWith("brex://expenses") && !uri.includes("/card");
+}
+
+export async function readExpensesUri(uri: string): Promise<any> {
+  logDebug(`Reading expenses resource: ${uri}`);
+  const brexClient = getBrexClient();
+  const params = expensesTemplate.parse(uri);
+  if (!params.id) {
+    try {
+      const listParams: ListExpensesParams = { limit: 50, expand: ['merchant', 'budget'] };
+      const expenses = await brexClient.getExpenses(listParams);
+      const qp = parseQueryParams(uri);
+      const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+      const summaryOnly = qp.summary_only === 'true';
+      const limited = limitExpensesPayload(expenses.items as any, { summaryOnly, fields, hardTokenLimit: 24000 });
+      return { contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(limited.items, null, 2) }] } as any;
+    } catch (error) {
+      logError(`Failed to fetch expenses: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
     }
-    
-    logDebug(`Reading expenses resource: ${uri}`);
-    
-    // Get Brex client
-    const brexClient = getBrexClient();
-    
-    // Parse parameters from URI
-    const params = expensesTemplate.parse(uri);
-    
-    if (!params.id) {
-      // List all expenses
-      try {
-        logDebug("Fetching all expenses from Brex API");
-        const listParams: ListExpensesParams = {
-          limit: 50,
-          expand: ['merchant', 'budget'] // Always expand merchant and budget information
-        };
-        const expenses = await brexClient.getExpenses(listParams);
-        const qp = parseQueryParams(uri);
-        const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
-        const summaryOnly = qp.summary_only === 'true';
-        const limited = limitExpensesPayload(expenses.items as any, { summaryOnly, fields, hardTokenLimit: 24000 });
-        logDebug(`Successfully fetched ${expenses.items.length} expenses (returned: ${limited.items.length})`);
-        return {
-          contents: [{
-            uri: uri,
-            mimeType: "application/json",
-            text: JSON.stringify(limited.items, null, 2)
-          }]
-        };
-      } catch (error) {
-        logError(`Failed to fetch expenses: ${error instanceof Error ? error.message : String(error)}`);
-        throw error;
-      }
-    } else {
-      // Get specific expense
-      try {
-        logDebug(`Fetching expense ${params.id} from Brex API`);
-        const expense = await brexClient.getExpense(params.id, { 
-          expand: ['merchant', 'budget', 'location', 'department', 'receipts.download_uris'],
-          load_custom_fields: true
-        });
-        
-        if (!isExpense(expense)) {
-          logError(`Invalid expense data received for expense ID: ${params.id}`);
-          throw new Error('Invalid expense data received');
-        }
-        
-        const qp = parseQueryParams(uri);
-        const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
-        const summaryOnly = qp.summary_only === 'true';
-        const limited = limitExpensesPayload([expense] as any, { summaryOnly, fields, hardTokenLimit: 24000 });
-        logDebug(`Successfully fetched expense ${params.id} (summaryApplied=${limited.items.length === 1 && JSON.stringify(limited.items[0]) !== JSON.stringify(expense)})`);
-        return {
-          contents: [{
-            uri: uri,
-            mimeType: "application/json",
-            text: JSON.stringify(limited.items[0] || {}, null, 2)
-          }]
-        };
-      } catch (error) {
-        logError(`Failed to fetch expense ${params.id}: ${error instanceof Error ? error.message : String(error)}`);
-        throw error;
-      }
+  } else {
+    try {
+      const expense = await brexClient.getExpense(params.id, { expand: ['merchant','budget','location','department','receipts.download_uris'], load_custom_fields: true });
+      if (!isExpense(expense)) throw new Error('Invalid expense data received');
+      const qp = parseQueryParams(uri);
+      const fields = qp.fields ? qp.fields.split(',').map(s => s.trim()).filter(Boolean) : undefined;
+      const summaryOnly = qp.summary_only === 'true';
+      const limited = limitExpensesPayload([expense] as any, { summaryOnly, fields, hardTokenLimit: 24000 });
+      return { contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(limited.items[0] || {}, null, 2) }] } as any;
+    } catch (error) {
+      logError(`Failed to fetch expense ${params.id}: ${error instanceof Error ? error.message : String(error)}`);
+      throw error;
     }
-  });
-} 
+  }
+}

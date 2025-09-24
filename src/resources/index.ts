@@ -13,7 +13,8 @@ import { canHandleBudgetProgramsUri, readBudgetProgramsUri } from "./budgetProgr
 import { registerCardAccountsCapabilities, canHandleCardAccountsUri, readCardAccountsUri } from "./cardAccounts.js";
 import { canHandleCashAccountsUri, readCashAccountsUri } from "./cashAccounts.js";
 import { canHandleTransactionsUri, readTransactionsUri } from "./transactions.js";
-import { canHandleExpensesUri, readExpensesUri, canHandleCardExpensesUri, readCardExpensesUri } from "./router.js";
+import { canHandleExpensesUri, readExpensesUri } from "./expenses.js";
+import { canHandleCardExpensesUri, readCardExpensesUri } from "./cardExpenses.js";
 import { canHandleUsageUri, readUsageUri } from "./usage.js";
 import { logInfo, logDebug, logError } from "../utils/logger.js";
 
