@@ -7,16 +7,14 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { ListResourcesRequestSchema, ReadResourceRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { registerAccountsCapabilities, canHandleAccountsUri, readAccountsUri } from "./accounts.js";
-import { registerExpensesResource } from "./expenses.js";
-import { registerCardExpensesResource } from "./cardExpenses.js";
-import { registerBudgetsResource, canHandleBudgetsUri, readBudgetsUri } from "./budgets.js";
-import { registerSpendLimitsResource, canHandleSpendLimitsUri, readSpendLimitsUri } from "./spendLimits.js";
-import { registerBudgetProgramsResource, canHandleBudgetProgramsUri, readBudgetProgramsUri } from "./budgetPrograms.js";
+import { canHandleBudgetsUri, readBudgetsUri } from "./budgets.js";
+import { canHandleSpendLimitsUri, readSpendLimitsUri } from "./spendLimits.js";
+import { canHandleBudgetProgramsUri, readBudgetProgramsUri } from "./budgetPrograms.js";
 import { registerCardAccountsCapabilities, canHandleCardAccountsUri, readCardAccountsUri } from "./cardAccounts.js";
-import { registerCashAccountsResource, canHandleCashAccountsUri, readCashAccountsUri } from "./cashAccounts.js";
-import { registerTransactionsResource, canHandleTransactionsUri, readTransactionsUri } from "./transactions.js";
-import { registerResourcesRouter, canHandleExpensesUri, readExpensesUri, canHandleCardExpensesUri, readCardExpensesUri } from "./router.js";
-import { registerUsageResource, canHandleUsageUri, readUsageUri } from "./usage.js";
+import { canHandleCashAccountsUri, readCashAccountsUri } from "./cashAccounts.js";
+import { canHandleTransactionsUri, readTransactionsUri } from "./transactions.js";
+import { canHandleExpensesUri, readExpensesUri, canHandleCardExpensesUri, readCardExpensesUri } from "./router.js";
+import { canHandleUsageUri, readUsageUri } from "./usage.js";
 import { logInfo, logDebug, logError } from "../utils/logger.js";
 
 /**
@@ -42,20 +40,11 @@ export function registerResources(server: Server): void {
     if (canHandleBudgetProgramsUri(uri)) return await readBudgetProgramsUri(uri);
     return { handled: false } as any;
   });
-  // Register resource handlers
+  // Register capabilities only
   // Capabilities for accounts resources
   registerAccountsCapabilities(server);
-  registerExpensesResource(server);
-  registerCardExpensesResource(server);
-  registerBudgetsResource(server);
-  registerSpendLimitsResource(server);
-  registerBudgetProgramsResource(server);
   registerCardAccountsCapabilities(server);
-  registerCashAccountsResource(server);
-  registerTransactionsResource(server);
-  // Router last to ensure we return proper 'contents' arrays for expenses URIs
-  registerResourcesRouter(server);
-  registerUsageResource(server);
+  // Other resources are handled via dispatcher without per-module handler registration
 
   // Register the list resources handler
   registerListResourcesHandler(server);
