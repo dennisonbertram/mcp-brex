@@ -1,6 +1,6 @@
 {
   "name": "mcp-brex",
-  "version": "0.2.2",
+  "version": "0.3.0",
   "description": "MCP Server for Brex API Integration",
   "main": "build/index.js",
   "type": "module",

@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-09-24
+
+### Added
+- E2E framework with MCP client helper, and documentation (docs/server-improvement/testing/e2e-plan.md)
+- Descriptive resource capability registrations (expenses, card-expenses, accounts, transactions, budgets, spend limits, budget programs)
+
+### Changed
+- Centralized ReadResource dispatcher owns routing (removed router.ts)
+- Server capabilities enriched (resources/tools/prompts listChanged, logging)
+- Card/Cash transactions tools no longer advertise unsupported params (posted_at_start, expand)
+
+### Fixed
+- Do not send unsupported posted_at_start/expand to card/cash transactions (avoid 400s)
+- Optional client-side date filtering for transactions URIs
+- Improved tests across unit, integration, and E2E; all pass
+
 ## [0.2.0] - 2025-08-27
 
 ### Fixed
