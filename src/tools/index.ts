@@ -80,7 +80,22 @@ export function registerTools(server: Server): void {
  */
 function registerListToolsHandler(server: Server): void {
   server.setRequestHandler(ListToolsRequestSchema, async () => {
+    // Programmatic tools listing. Include a permissive inputSchema so
+    // clients like Claude Code render tools in the UI.
+    const names = Array.from(toolHandlers.keys());
     return {
+      tools: names.map((n) => ({
+        name: n,
+        description: `Tool: ${n}`,
+        inputSchema: {
+          type: "object",
+          // Keep permissive to avoid schema drift across handlers
+          properties: {},
+          additionalProperties: true,
+        },
+      })),
+    } as any;
+    /* return {
       tools: [
         {
           name: "get_budgets",
@@ -247,7 +262,7 @@ function registerListToolsHandler(server: Server): void {
         },
         {
           name: "get_expenses",
-          description: "LIST (single page): Expenses with optional filters. Returns complete expense objects. Example: {\"limit\":5,\"status\":\"APPROVED\",\"expand\":[\"merchant\"]}",
+          description: "LIST (single page): Expenses with optional filters. Returns complete expense objects with cents+dollars+formatted fields and summary by default.",
           inputSchema: {
             type: "object",
             properties: {
@@ -274,6 +289,8 @@ function registerListToolsHandler(server: Server): void {
                 type: "array",
                 items: { type: "string" },
                 description: "Fields to expand (e.g., merchant, receipts)"
+              },
+              
               }
             }
           }
@@ -412,7 +429,7 @@ function registerListToolsHandler(server: Server): void {
         },
         {
           name: "get_all_expenses",
-          description: "LIST: Paginated expenses with filters. Returns complete expense objects. Example: {\"page_size\":5,\"max_items\":5,\"status\":[\"APPROVED\"],\"window_days\":7,\"min_amount\":100}",
+          description: "LIST: Paginated expenses with filters. Returns complete expense objects with cents+dollars+formatted fields and summary by default.",
           inputSchema: {
             type: "object",
             properties: {
@@ -472,13 +489,15 @@ function registerListToolsHandler(server: Server): void {
                 type: "array",
                 items: { type: "string" },
                 description: "Fields to expand (e.g., merchant, receipts)"
+              },
+              
               }
             }
           }
         },
         {
           name: "get_all_card_expenses",
-          description: "LIST: Paginated card expenses (no expense_type needed). Returns complete card expense objects. Example: {\"page_size\":5,\"max_items\":5,\"window_days\":7,\"min_amount\":100}",
+          description: "LIST: Paginated card expenses (no expense_type needed). Returns complete card expense objects with cents+dollars+formatted fields and summary by default.",
           inputSchema: {
             type: "object",
             properties: {
@@ -534,12 +553,14 @@ function registerListToolsHandler(server: Server): void {
                 type: "array",
                 items: { type: "string" },
                 description: "Fields to expand (e.g., merchant, receipts)"
+              },
+              
               }
             }
           }
         }
       ]
-    };
+    }; */
   });
 }
 
