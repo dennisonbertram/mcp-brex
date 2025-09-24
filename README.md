@@ -2,6 +2,9 @@
 
 A Model Context Protocol (MCP) server for the Brex API. Optimized for safe, small, read-only responses with projection and batching.
 
+## What’s New (0.3.2)
+- Fix: Tools now include a permissive `inputSchema` in the tools list so clients like Claude Code properly display and allow calling tools. No behavior changes to handlers.
+
 ## Installation
 
 ### Claude Code
@@ -60,7 +63,7 @@ Notes:
 - Expenses (paginated): `get_all_expenses`, `get_all_card_expenses`
 - Expense by ID: `get_expense`, `get_card_expense`
 - Card Statements: `get_card_statements_primary`
-- Transactions: `get_card_transactions`, `get_cash_transactions`
+- Transactions: `get_card_transactions`, `get_cash_transactions` (note: no date filter/expand on transactions)
 - Cash Statements: `get_cash_account_statements`
 - Accounts: `get_all_accounts`, `get_account_details`
 - Receipts (write): `match_receipt`, `upload_receipt`
@@ -109,7 +112,8 @@ Recommended examples:
   "name": "get_card_transactions",
   "arguments": {
     "limit": 10,
-    "posted_at_start": "2025-08-25T00:00:00Z"
+    "summary_only": true,
+    "fields": ["id", "posted_at", "amount.amount", "amount.currency", "merchant.raw_descriptor"]
   }
 }
 ```
@@ -168,6 +172,33 @@ Recommended examples:
   - **Available expand options**: `merchant`, `budget`, `user`, `department`, `location`, `receipts`
 - **Test with small limits first** before scaling up
 - Cash endpoints require additional Brex scopes; handle 403s gracefully
+
+Note: Brex transactions endpoints (card and cash) do not support `posted_at_start` or `expand`. Retrieve transactions and, if needed, filter client-side by `posted_at`/`posted_at_date`.
+
+## Money & Units
+
+All amounts from Brex are in cents. This server annotates money fields in tool outputs by default to prevent unit mistakes:
+
+- amount_cents: integer (e.g., 100000)
+- amount_dollars: number in dollars (e.g., 1000.0)
+- amount_formatted: human-friendly string (e.g., "$1,000.00")
+
+Example (expense purchased_amount):
+```json
+{
+  "purchased_amount": {
+    "amount_cents": 100000,
+    "amount_dollars": 1000.0,
+    "amount_formatted": "$1,000.00",
+    "currency": "USD"
+  }
+}
+```
+
+Controls:
+- `format_amounts`: `"cents" | "dollars" | "both"` (default: `"both"`)
+- `include_formatted`: boolean (default: true)
+- `include_summary`: boolean (default: true) adds `meta.summary` totals/averages
 
 ## Publishing
 
