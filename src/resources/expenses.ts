@@ -25,7 +25,7 @@ export function registerExpensesCapabilities(server: Server): void {
   server.registerCapabilities({
     resources: {
       "brex://expenses{/id}": {
-        description: "Brex expenses",
+        description: "Brex expenses (list or by ID); supports fields & summary_only",
         mimeTypes: ["application/json"],
       }
     }

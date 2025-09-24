@@ -36,9 +36,9 @@ const server = new Server(
   },
   {
     capabilities: {
-      resources: {},
-      tools: {},
-      prompts: {},
+      resources: { listChanged: false, subscribe: false },
+      tools: { listChanged: true },
+      prompts: { listChanged: true },
       // Advertise support for server-side logging notifications
       logging: {},
     },

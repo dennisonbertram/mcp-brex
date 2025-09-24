@@ -214,6 +214,25 @@ export function registerCashAccountsResource(server: Server): void {
   });
 }
 
+export function registerCashAccountsCapabilities(server: Server): void {
+  server.registerCapabilities({
+    resources: {
+      "brex://accounts/cash{/id}": {
+        description: "Brex cash accounts (list or by ID)",
+        mimeTypes: ["application/json"],
+      },
+      "brex://accounts/cash/primary": {
+        description: "Brex primary cash account",
+        mimeTypes: ["application/json"],
+      },
+      "brex://accounts/cash/{id}/statements": {
+        description: "Cash account statements (paginated)",
+        mimeTypes: ["application/json"],
+      }
+    }
+  });
+}
+
 export function canHandleCashAccountsUri(uri: string): boolean {
   return uri.startsWith("brex://accounts/cash");
 }

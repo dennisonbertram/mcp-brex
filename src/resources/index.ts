@@ -7,14 +7,14 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { ListResourcesRequestSchema, ReadResourceRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { registerAccountsCapabilities, canHandleAccountsUri, readAccountsUri } from "./accounts.js";
-import { canHandleBudgetsUri, readBudgetsUri } from "./budgets.js";
-import { canHandleSpendLimitsUri, readSpendLimitsUri } from "./spendLimits.js";
-import { canHandleBudgetProgramsUri, readBudgetProgramsUri } from "./budgetPrograms.js";
+import { registerBudgetsCapabilities, canHandleBudgetsUri, readBudgetsUri } from "./budgets.js";
+import { registerSpendLimitsCapabilities, canHandleSpendLimitsUri, readSpendLimitsUri } from "./spendLimits.js";
+import { registerBudgetProgramsCapabilities, canHandleBudgetProgramsUri, readBudgetProgramsUri } from "./budgetPrograms.js";
 import { registerCardAccountsCapabilities, canHandleCardAccountsUri, readCardAccountsUri } from "./cardAccounts.js";
-import { canHandleCashAccountsUri, readCashAccountsUri } from "./cashAccounts.js";
-import { canHandleTransactionsUri, readTransactionsUri } from "./transactions.js";
-import { canHandleExpensesUri, readExpensesUri } from "./expenses.js";
-import { canHandleCardExpensesUri, readCardExpensesUri } from "./cardExpenses.js";
+import { registerCashAccountsCapabilities, canHandleCashAccountsUri, readCashAccountsUri } from "./cashAccounts.js";
+import { registerTransactionsCapabilities, canHandleTransactionsUri, readTransactionsUri } from "./transactions.js";
+import { registerExpensesCapabilities, canHandleExpensesUri, readExpensesUri } from "./expenses.js";
+import { registerCardExpensesCapabilities, canHandleCardExpensesUri, readCardExpensesUri } from "./cardExpenses.js";
 import { canHandleUsageUri, readUsageUri } from "./usage.js";
 import { logInfo, logDebug, logError } from "../utils/logger.js";
 
@@ -41,11 +41,16 @@ export function registerResources(server: Server): void {
     if (canHandleBudgetProgramsUri(uri)) return await readBudgetProgramsUri(uri);
     return { handled: false } as any;
   });
-  // Register capabilities only
-  // Capabilities for accounts resources
+  // Register capabilities only (no per-module handlers)
   registerAccountsCapabilities(server);
   registerCardAccountsCapabilities(server);
-  // Other resources are handled via dispatcher without per-module handler registration
+  registerCashAccountsCapabilities(server);
+  registerTransactionsCapabilities(server);
+  registerExpensesCapabilities(server);
+  registerCardExpensesCapabilities(server);
+  registerBudgetsCapabilities(server);
+  registerSpendLimitsCapabilities(server);
+  registerBudgetProgramsCapabilities(server);
 
   // Register the list resources handler
   registerListResourcesHandler(server);

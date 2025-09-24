@@ -190,6 +190,21 @@ export function registerTransactionsResource(server: Server): void {
   });
 }
 
+export function registerTransactionsCapabilities(server: Server): void {
+  server.registerCapabilities({
+    resources: {
+      "brex://transactions/card/primary": {
+        description: "Brex primary card transactions (paginated)",
+        mimeTypes: ["application/json"],
+      },
+      "brex://transactions/cash/{id}": {
+        description: "Brex cash transactions by account (paginated)",
+        mimeTypes: ["application/json"],
+      }
+    }
+  });
+}
+
 export function canHandleTransactionsUri(uri: string): boolean {
   return uri.startsWith("brex://transactions");
 }

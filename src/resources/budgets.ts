@@ -37,6 +37,17 @@ export const registerBudgetsResource = (server: Server): void => {
   });
 };
 
+export function registerBudgetsCapabilities(server: Server): void {
+  server.registerCapabilities({
+    resources: {
+      "brex://budgets{/id}": {
+        description: "Brex budgets (list or by ID)",
+        mimeTypes: ["application/json"],
+      }
+    }
+  });
+}
+
 export function canHandleBudgetsUri(uri: string): boolean {
   return uri.startsWith('brex://budgets');
 }

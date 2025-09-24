@@ -37,6 +37,17 @@ export const registerSpendLimitsResource = (server: Server): void => {
   });
 };
 
+export function registerSpendLimitsCapabilities(server: Server): void {
+  server.registerCapabilities({
+    resources: {
+      "brex://spend_limits{/id}": {
+        description: "Brex spend limits (list or by ID)",
+        mimeTypes: ["application/json"],
+      }
+    }
+  });
+}
+
 export function canHandleSpendLimitsUri(uri: string): boolean {
   return uri.startsWith('brex://spend_limits');
 }
