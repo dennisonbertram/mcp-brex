@@ -60,10 +60,8 @@ export function registerTransactionsResource(server: Server): void {
       const options = {
         cursor: qp.cursor || undefined,
         limit: qp.limit ? parseInt(qp.limit, 10) : undefined,
-        posted_at_start: qp.posted_at_start || undefined,
-        user_ids: qp.user_id ? [qp.user_id] : undefined,
-        expand: qp.expand ? [qp.expand] : undefined
-      };
+        user_ids: qp.user_id ? [qp.user_id] : undefined
+      } as any;
       
       try {
         logDebug("Fetching card transactions from Brex API", { options });
@@ -88,7 +86,15 @@ export function registerTransactionsResource(server: Server): void {
         const summaryOnly = qp.summary_only === 'true';
         const tooBig = estimateTokens(JSON.stringify(transactions.items)) > 24000;
         const summarized = summaryOnly || tooBig;
-        const projected = summarized && fields && fields.length ? transactions.items.map(t => project(t, fields)) : (summarized ? transactions.items.map(t => project(t, DEFAULT_TX_FIELDS)) : transactions.items);
+        // Optional client-side date filter: posted_at_start (ISO) if provided
+        const clientFiltered = (() => {
+          const start = qp.posted_at_start ? Date.parse(qp.posted_at_start) : NaN;
+          if (!isNaN(start)) {
+            return transactions.items.filter((t: any) => Date.parse(t.posted_at_date || t.posted_at || '') >= start);
+          }
+          return transactions.items;
+        })();
+        const projected = summarized && fields && fields.length ? clientFiltered.map(t => project(t, fields)) : (summarized ? clientFiltered.map(t => project(t, DEFAULT_TX_FIELDS)) : clientFiltered);
         // Format response with pagination information
         const result = {
           items: projected,
@@ -237,7 +243,7 @@ export async function readTransactionsUri(uri: string): Promise<any> {
     const params = cashTransactionsTemplate.parse(uri);
     if (!params.id) return { error: { message: 'Account ID is required for cash transactions endpoint', code: 400 } } as any;
     const qp = parseQueryParams(uri);
-    const options = { cursor: qp.cursor || undefined, limit: qp.limit ? parseInt(qp.limit, 10) : undefined, posted_at_start: qp.posted_at_start || undefined } as any;
+    const options = { cursor: qp.cursor || undefined, limit: qp.limit ? parseInt(qp.limit, 10) : undefined } as any;
     const transactions = await brexClient.getCashTransactions(params.id, options);
     if (!transactions.items || !Array.isArray(transactions.items)) throw new Error('Invalid cash transactions data received');
     for (const t of transactions.items) { if (!isCashTransaction(t)) throw new Error('Invalid cash transaction data received'); }
@@ -245,7 +251,15 @@ export async function readTransactionsUri(uri: string): Promise<any> {
     const summaryOnly = qp.summary_only === 'true';
     const tooBig = estimateTokens(JSON.stringify(transactions.items)) > 24000;
     const summarized = summaryOnly || tooBig;
-    const projected = summarized && fields && fields.length ? transactions.items.map(t => project(t, fields)) : (summarized ? transactions.items.map(t => project(t, DEFAULT_CASH_TX_FIELDS)) : transactions.items);
+    // Optional client-side date filter for cash
+    const clientFiltered = (() => {
+      const start = qp.posted_at_start ? Date.parse(qp.posted_at_start) : NaN;
+      if (!isNaN(start)) {
+        return transactions.items.filter((t: any) => Date.parse(t.posted_at_date || t.posted_at || '') >= start);
+      }
+      return transactions.items;
+    })();
+    const projected = summarized && fields && fields.length ? clientFiltered.map(t => project(t, fields)) : (summarized ? clientFiltered.map(t => project(t, DEFAULT_CASH_TX_FIELDS)) : clientFiltered);
     const result = { items: projected, pagination: { hasMore: !!(transactions as any).next_cursor, nextCursor: (transactions as any).next_cursor }, meta: { summary_applied: summarized } };
     return { contents: [{ uri, mimeType: 'application/json', text: JSON.stringify(result, null, 2) }] } as any;
   }

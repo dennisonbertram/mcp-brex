@@ -15,8 +15,6 @@ interface GetCashTransactionsParams {
   account_id: string;
   cursor?: string;
   limit?: number;
-  posted_at_start?: string;
-  expand?: string[];
 }
 
 function validateParams(input: unknown): GetCashTransactionsParams {
@@ -32,16 +30,7 @@ function validateParams(input: unknown): GetCashTransactionsParams {
     out.limit = n;
   }
   
-  if (raw.posted_at_start !== undefined) {
-    out.posted_at_start = new Date(String(raw.posted_at_start)).toISOString();
-  }
-  
-  if (raw.expand !== undefined) {
-    out.expand = Array.isArray(raw.expand) ? raw.expand.map(String) : [String(raw.expand)];
-  }
-  
-  // Ignore deprecated parameters silently
-  // summary_only and fields are no longer supported but we don't error out
+  // Ignore unsupported parameters silently (posted_at_start, expand)
   
   return out;
 }
@@ -55,9 +44,7 @@ export function registerGetCashTransactions(_server: Server): void {
       // Call API with all supported parameters
       const resp = await client.getCashTransactions(params.account_id, {
         cursor: params.cursor,
-        limit: params.limit,
-        posted_at_start: params.posted_at_start,
-        expand: params.expand
+        limit: params.limit
       });
       
       // Return complete transaction objects without any filtering or summarization

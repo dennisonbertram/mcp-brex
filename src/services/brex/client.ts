@@ -376,8 +376,6 @@ export class BrexClient {
     cursor?: string;
     limit?: number;
     user_ids?: string[];
-    posted_at_start?: string;
-    expand?: string[];
   }): Promise<PageCardTransaction> {
     try {
       const params: Record<string, unknown> = {};
@@ -385,8 +383,7 @@ export class BrexClient {
         if (options.cursor) params.cursor = options.cursor;
         if (options.limit) params.limit = options.limit;
         if (options.user_ids && options.user_ids.length > 0) params.user_ids = options.user_ids;
-        if (options.posted_at_start) params.posted_at_start = options.posted_at_start;
-        if (options.expand && options.expand.length > 0) params['expand[]'] = options.expand;
+        // Note: posted_at_start and expand are NOT supported for card transactions; omit to avoid 400s
       }
 
       logDebug('Fetching card transactions from Brex API');
@@ -408,16 +405,13 @@ export class BrexClient {
   async getCashTransactions(id: string, options?: {
     cursor?: string;
     limit?: number;
-    posted_at_start?: string;
-    expand?: string[];
   }): Promise<PageCashTransaction> {
     try {
       const params: Record<string, unknown> = {};
       if (options) {
         if (options.cursor) params.cursor = options.cursor;
         if (options.limit) params.limit = options.limit;
-        if (options.posted_at_start) params.posted_at_start = options.posted_at_start;
-        if (options.expand) params.expand = options.expand;
+        // Note: posted_at_start and expand are NOT supported for cash transactions; omit to avoid 400s
       }
 
       logDebug(`Fetching cash transactions for account ${id} from Brex API`);

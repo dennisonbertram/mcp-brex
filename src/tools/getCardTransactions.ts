@@ -27,8 +27,6 @@ interface GetCardTransactionsParams {
   cursor?: string;
   limit?: number;
   user_ids?: string[];
-  posted_at_start?: string;
-  expand?: string[]; // Kept for interface compatibility but not used
   summary_only?: boolean;
   fields?: string[];
 }
@@ -43,12 +41,7 @@ function validateParams(input: unknown): GetCardTransactionsParams {
     out.limit = n;
   }
   if (raw.user_ids !== undefined) out.user_ids = Array.isArray(raw.user_ids) ? raw.user_ids.map(String) : [String(raw.user_ids)];
-  if (raw.posted_at_start !== undefined) out.posted_at_start = new Date(String(raw.posted_at_start)).toISOString();
-  // NOTE: expand parameter is intentionally ignored for card transactions
-  // The Brex card transactions API endpoint does not support expand parameters
-  // and will return 400 "Unsupported entity expansion" if expand is passed.
-  // Merchant information is always included by default in the response.
-  if (raw.expand !== undefined) out.expand = Array.isArray(raw.expand) ? raw.expand.map(String) : [String(raw.expand)];
+  // posted_at_start and expand are not supported by the API; ignore if provided
   if (raw.summary_only !== undefined) out.summary_only = Boolean(raw.summary_only);
   if (raw.fields !== undefined) out.fields = Array.isArray(raw.fields) ? raw.fields.map(String) : [String(raw.fields)];
   return out;
@@ -65,9 +58,7 @@ export function registerGetCardTransactions(_server: Server): void {
       const resp = await client.getCardTransactions({
         cursor: params.cursor,
         limit: params.limit,
-        user_ids: params.user_ids,
-        posted_at_start: params.posted_at_start
-        // expand is intentionally omitted - not supported by this endpoint
+        user_ids: params.user_ids
       });
 
       const items = Array.isArray(resp.items) ? resp.items : [];
@@ -118,5 +109,3 @@ export function registerGetCardTransactions(_server: Server): void {
     }
   });
 }
-
-

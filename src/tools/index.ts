@@ -191,30 +191,26 @@ function registerListToolsHandler(server: Server): void {
         },
         {
           name: "get_cash_transactions",
-          description: "LIST: Cash transactions (requires cash scopes). Example: {\"account_id\":\"cash_acc_123\",\"limit\":10}. Returns complete transaction objects.",
+          description: "LIST: Cash transactions (requires cash scopes). Example: {\"account_id\":\"cash_acc_123\",\"limit\":10}. Returns complete transaction objects. Note: posted_at_start and expand are not supported by the API.",
           inputSchema: {
             type: "object",
             properties: {
               account_id: { type: "string", description: "Cash account ID" },
               cursor: { type: "string", description: "Pagination cursor" },
-              limit: { type: "number", description: "Items per page (1-100)" },
-              posted_at_start: { type: "string", description: "ISO timestamp to start from" },
-              expand: { type: "array", items: { type: "string" }, description: "Fields to expand" }
+              limit: { type: "number", description: "Items per page (1-100)" }
             },
             required: ["account_id"]
           }
         },
         {
           name: "get_card_transactions",
-          description: "LIST: Primary card transactions. Returns complete transaction objects. Example: {\"limit\":10,\"posted_at_start\":\"2025-08-01T00:00:00Z\",\"expand\":[\"merchant\"]}",
+          description: "LIST: Primary card transactions. Returns complete transaction objects. Note: posted_at_start and expand are not supported by the API.",
           inputSchema: {
             type: "object",
             properties: {
               cursor: { type: "string", description: "Pagination cursor" },
               limit: { type: "number", description: "Items per page (default 50)" },
-              user_ids: { type: "array", items: { type: "string" }, description: "Optional filter by user IDs" },
-              posted_at_start: { type: "string", description: "ISO timestamp to start from" },
-              expand: { type: "array", items: { type: "string" }, description: "Fields to expand" }
+              user_ids: { type: "array", items: { type: "string" }, description: "Optional filter by user IDs" }
             }
           }
         },
