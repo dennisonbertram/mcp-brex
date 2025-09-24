@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.2] - 2025-09-24
+
+### Fixed
+- Tools discovery in clients like Claude Code by including a permissive `inputSchema` in the tools list response. This ensures tools render and are callable in the UI.
+
+### Changed
+- Bumped server/package version to `0.3.2`.
+- README updated with “What’s New (0.3.2)” describing the fix.
+
+### Notes
+- No behavior changes to individual tool handlers; only listing metadata was adjusted to improve client compatibility.
+
 ## [0.3.0] - 2025-09-24
 
 ### Added
@@ -55,3 +67,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Initial MCP server implementation for Brex API
 - Basic expense, budget, and transaction tools
 - Authentication and API key management
+## [0.3.1] - 2025-09-24
+
+### Added
+- Tests covering money annotations and summaries for all major tools:
+  - get_all_expenses, get_all_card_expenses, get_card_transactions, get_cash_transactions
+- Documentation: Money & Units guide (docs/server-improvement/money/annotations.md)
+- Testing extensions summary (docs/server-improvement/testing/extensions.md)
+
+### Changed
+- ListTools: replaced brittle static schema with programmatic listing derived from registered handlers
+- README: updated examples and added Money & Units section; clarified transaction parameter support
+- Usage doc: clarified that card/cash transactions do not support date filtering or expand; added client-side filtering guidance
+
+### Fixed
+- TypeScript parse errors in tools listing caused by large static array drift
