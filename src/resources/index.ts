@@ -73,67 +73,67 @@ function registerListResourcesHandler(server: Server): void {
           uri: "brex://accounts",
           mimeType: "application/json",
           name: "Brex Accounts",
-          description: "List of all Brex accounts"
+          description: "List of all Brex accounts (card and cash) with balances and status. Supports query parameters: ?summary_only=true (condensed data), &fields=field1,field2 (select specific fields using dot notation, e.g., 'id,status,current_balance.amount')"
         },
         {
           uri: "brex://accounts/card",
           mimeType: "application/json",
           name: "Brex Card Accounts",
-          description: "List of all Brex card accounts"
+          description: "List of all card accounts with balances and status. Supports query parameters: ?summary_only=true, &fields=field1,field2"
         },
         {
           uri: "brex://accounts/cash",
           mimeType: "application/json",
           name: "Brex Cash Accounts",
-          description: "List of all Brex cash accounts"
+          description: "List of all cash accounts with balances and status. Requires cash account scopes. Supports query parameters: ?summary_only=true, &fields=field1,field2"
         },
         {
           uri: "brex://accounts/cash/primary",
           mimeType: "application/json",
           name: "Brex Primary Cash Account",
-          description: "Brex primary cash account details"
+          description: "Information for the primary cash account. Requires cash account scopes. Supports query parameters: ?summary_only=true, &fields=field1,field2"
         },
         {
           uri: "brex://transactions/card/primary",
           mimeType: "application/json",
           name: "Brex Card Transactions",
-          description: "List of all Brex card transactions"
+          description: "List of settled transactions for all card accounts. Supports query parameters: ?summary_only=true, &fields=field1,field2"
         },
         {
           uri: "brex://expenses",
           mimeType: "application/json",
           name: "Brex Expenses",
-          description: "List of all Brex expenses"
+          description: "List of all Brex expenses with automatic expansion of merchant and budget details. Supports query parameters: ?summary_only=true (condensed data), &fields=field1,field2 (select specific fields using dot notation, e.g., 'id,status,purchased_amount.amount')"
         },
         {
           uri: "brex://expenses/card",
           mimeType: "application/json",
           name: "Brex Card Expenses",
-          description: "List of all Brex card expenses"
+          description: "List of all card expenses with automatic expansion of merchant and budget details. Supports query parameters: ?summary_only=true, &fields=field1,field2"
         },
         {
           uri: "brex://budgets",
           mimeType: "application/json",
           name: "Brex Budgets",
-          description: "List of all Brex budgets"
+          description: "List of all budget allocations with spending limits and status. Supports query parameters: ?summary_only=true, &fields=field1,field2"
         },
         {
           uri: "brex://spend_limits",
           mimeType: "application/json",
           name: "Brex Spend Limits",
-          description: "List of all Brex spend limits"
+          description: "List of all spend limit policies with authorization settings. Supports query parameters: ?summary_only=true, &fields=field1,field2"
         },
         {
           uri: "brex://budget_programs",
           mimeType: "application/json",
           name: "Brex Budget Programs",
-          description: "List of all Brex budget programs"
+          description: "List of all budget programs with employee filter configurations. Supports query parameters: ?summary_only=true, &fields=field1,field2"
         },
         {
           uri: "brex://docs/usage",
           mimeType: "application/json",
           name: "Brex MCP Usage Guide",
-          description: "Guidelines and examples for using the tools safely and efficiently"
+          description: "Guidelines and examples for using the Brex MCP server safely and efficiently. Includes parameter reference, tool selection guide, and best practices."
         }
       ];
       
@@ -146,63 +146,63 @@ function registerListResourcesHandler(server: Server): void {
           uriTemplate: "brex://accounts/{id}",
           name: "brex-account",
           title: "Brex Account by ID",
-          description: "Fetch a specific Brex account by ID",
+          description: "Detailed information for a specific account by ID. Supports query parameters: ?summary_only=true, &fields=field1,field2",
           mimeType: "application/json"
         },
         {
           uriTemplate: "brex://accounts/card/{id}",
           name: "brex-card-account",
           title: "Brex Card Account by ID",
-          description: "Fetch a specific Brex card account by ID (if supported)",
+          description: "Detailed information for a specific card account by ID. Supports query parameters: ?summary_only=true, &fields=field1,field2",
           mimeType: "application/json"
         },
         {
           uriTemplate: "brex://accounts/cash/{id}",
           name: "brex-cash-account",
           title: "Brex Cash Account by ID",
-          description: "Fetch a specific Brex cash account by ID",
+          description: "Detailed information for a specific cash account by ID. Requires cash account scopes. Supports query parameters: ?summary_only=true, &fields=field1,field2",
           mimeType: "application/json"
         },
         {
           uriTemplate: "brex://transactions/cash/{id}",
           name: "brex-cash-transactions",
           title: "Cash Account Transactions",
-          description: "List transactions for a specific cash account",
+          description: "List of settled transactions for a specific cash account by ID. Requires cash account scopes. Supports query parameters: ?summary_only=true, &fields=field1,field2",
           mimeType: "application/json"
         },
         {
           uriTemplate: "brex://expenses/{id}",
           name: "brex-expense",
           title: "Expense by ID",
-          description: "Fetch a specific expense by ID",
+          description: "Detailed information for a specific expense by ID. Automatically expands merchant and budget details. Supports query parameters: ?summary_only=true, &fields=field1,field2",
           mimeType: "application/json"
         },
         {
           uriTemplate: "brex://expenses/card/{id}",
           name: "brex-card-expense",
           title: "Card Expense by ID",
-          description: "Fetch a specific card expense by ID",
+          description: "Detailed information for a specific card expense by ID. Automatically expands merchant and budget details. Supports query parameters: ?summary_only=true, &fields=field1,field2",
           mimeType: "application/json"
         },
         {
           uriTemplate: "brex://budgets/{id}",
           name: "brex-budget",
           title: "Budget by ID",
-          description: "Fetch a specific budget by ID",
+          description: "Detailed information for a specific budget by ID. Supports query parameters: ?summary_only=true, &fields=field1,field2",
           mimeType: "application/json"
         },
         {
           uriTemplate: "brex://spend_limits/{id}",
           name: "brex-spend-limit",
           title: "Spend Limit by ID",
-          description: "Fetch a specific spend limit by ID",
+          description: "Detailed information for a specific spend limit by ID. Supports query parameters: ?summary_only=true, &fields=field1,field2",
           mimeType: "application/json"
         },
         {
           uriTemplate: "brex://budget_programs/{id}",
           name: "brex-budget-program",
           title: "Budget Program by ID",
-          description: "Fetch a specific budget program by ID",
+          description: "Detailed information for a specific budget program by ID. Supports query parameters: ?summary_only=true, &fields=field1,field2",
           mimeType: "application/json"
         }
       ];
@@ -218,61 +218,61 @@ function registerListResourcesHandler(server: Server): void {
             uri: "brex://accounts",
             mimeType: "application/json",
             name: "Brex Accounts",
-            description: "List of all Brex accounts"
+            description: "List of all Brex accounts (card and cash) with balances and status. Supports query parameters: ?summary_only=true, &fields=field1,field2"
           },
           {
             uri: "brex://accounts/card",
             mimeType: "application/json",
             name: "Brex Card Accounts",
-            description: "List of all Brex card accounts"
+            description: "List of all card accounts with balances and status. Supports query parameters: ?summary_only=true, &fields=field1,field2"
           },
           {
             uri: "brex://accounts/cash",
             mimeType: "application/json",
             name: "Brex Cash Accounts",
-            description: "List of all Brex cash accounts"
+            description: "List of all cash accounts with balances and status. Requires cash account scopes. Supports query parameters: ?summary_only=true, &fields=field1,field2"
           },
           {
             uri: "brex://accounts/cash/primary",
             mimeType: "application/json",
             name: "Brex Primary Cash Account",
-            description: "Brex primary cash account details"
+            description: "Information for the primary cash account. Requires cash account scopes. Supports query parameters: ?summary_only=true, &fields=field1,field2"
           },
           {
             uri: "brex://transactions/card/primary",
             mimeType: "application/json",
             name: "Brex Card Transactions",
-            description: "List of all Brex card transactions"
+            description: "List of settled transactions for all card accounts. Supports query parameters: ?summary_only=true, &fields=field1,field2"
           },
           {
             uri: "brex://expenses",
             mimeType: "application/json",
             name: "Brex Expenses",
-            description: "List of all Brex expenses"
+            description: "List of all Brex expenses with automatic expansion of merchant and budget details. Supports query parameters: ?summary_only=true, &fields=field1,field2"
           },
           {
             uri: "brex://expenses/card",
             mimeType: "application/json",
             name: "Brex Card Expenses",
-            description: "List of all Brex card expenses"
+            description: "List of all card expenses with automatic expansion of merchant and budget details. Supports query parameters: ?summary_only=true, &fields=field1,field2"
           },
           {
             uri: "brex://budgets",
             mimeType: "application/json",
             name: "Brex Budgets",
-            description: "List of all Brex budgets"
+            description: "List of all budget allocations with spending limits and status. Supports query parameters: ?summary_only=true, &fields=field1,field2"
           },
           {
             uri: "brex://spend_limits",
             mimeType: "application/json",
             name: "Brex Spend Limits",
-            description: "List of all Brex spend limits"
+            description: "List of all spend limit policies with authorization settings. Supports query parameters: ?summary_only=true, &fields=field1,field2"
           },
           {
             uri: "brex://budget_programs",
             mimeType: "application/json",
             name: "Brex Budget Programs",
-            description: "List of all Brex budget programs"
+            description: "List of all budget programs with employee filter configurations. Supports query parameters: ?summary_only=true, &fields=field1,field2"
           }
         ];
 
